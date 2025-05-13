@@ -1,0 +1,66 @@
+generator client {
+  provider = "prisma-client-js"
+  }
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Role {
+  id    String @id @default(uuid())
+  name  String @unique
+  users User[]
+}
+
+model User {
+  id         String   @id @default(uuid())
+  username   String   @unique
+  email      String   @unique
+  password   String
+  firstName  String
+  middleName String?
+  lastName   String
+  createdAt  DateTime @default(now())
+  roleId     String
+  role       Role     @relation(fields: [roleId], references: [id])
+
+  // back-relations
+  questionsCreated Question[] @relation("QuestionAuthor")
+  testsTaken       Test[]     @relation("TestTakers")
+  testsCreated     Test[]     @relation("TestCreators")
+}
+
+model Question {
+  id         Int    @id @default(autoincrement())
+  text       String
+  options    Json
+  correct    String
+  difficulty Int?
+
+  // author
+  createdBy   User   @relation("QuestionAuthor", fields: [createdById], references: [id])
+  createdById String
+
+  // which tests include this question
+  tests Test[] @relation("TestQuestions")
+}
+
+model Test {
+  id           Int       @id @default(autoincrement())
+  title        String
+  durationMins Int
+  startTime    DateTime?
+  endTime      DateTime?
+  settings     Json?
+
+  // who created this test
+  createdBy   User?   @relation("TestCreators", fields: [createdById], references: [id])
+  createdById String?
+
+  // questions in this test
+  questions Question[] @relation("TestQuestions")
+
+  // students who took (or will take) this test
+  takers User[] @relation("TestTakers")
+}
