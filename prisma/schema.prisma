@@ -1,66 +1,138 @@
 generator client {
   provider = "prisma-client-js"
-  }
+}
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
+// -----------------------------
+// Enums
+// -----------------------------
+enum RoleName {
+  ADMIN
+  STUDENT
+  TEACHER
+}
+
+// ----------------------------------
+// Authentication & Users 
+// ----------------------------------
 model Role {
-  id    String @id @default(uuid())
+  id    Int    @id @default(autoincrement())
   name  String @unique
+
   users User[]
 }
 
 model User {
-  id         String   @id @default(uuid())
-  username   String   @unique
-  email      String   @unique
+  id         String      @id @default(uuid())
+  username   String      @unique
+  email      String      @unique
   password   String
   firstName  String
   middleName String?
   lastName   String
-  createdAt  DateTime @default(now())
-  roleId     String
-  role       Role     @relation(fields: [roleId], references: [id])
+  createdAt  DateTime    @default(now())
+
+  roleId     Int
+  role       Role        @relation(fields: [roleId], references: [id])
 
   // back-relations
-  questionsCreated Question[] @relation("QuestionAuthor")
-  testsTaken       Test[]     @relation("TestTakers")
-  testsCreated     Test[]     @relation("TestCreators")
+  questionsCreated Question[]   @relation("QuestionAuthor")
+  testTakes        TestTaker[]  @relation("TestTakers")   // explicit join entries
+  testsCreated     Test[]       @relation("TestCreators") // the tests this user created
 }
 
-model Question {
-  id         Int    @id @default(autoincrement())
-  text       String
-  options    Json
-  correct    String
-  difficulty Int?
+// ----------------------------------
+// Academic Periods
+// ----------------------------------
+model Session {
+  id        Int        @id @default(autoincrement())
+  code      String     @unique
+  name      String
 
-  // author
-  createdBy   User   @relation("QuestionAuthor", fields: [createdById], references: [id])
-  createdById String
-
-  // which tests include this question
-  tests Test[] @relation("TestQuestions")
+  semesters Semester[]
+  tests     Test[]     @relation("SessionTests")
 }
 
+model Semester {
+  id         Int        @id @default(autoincrement())
+  code       String     @unique
+  name       String
+
+  session    Session    @relation(fields: [sessionId], references: [id])
+  sessionId  Int
+  tests      Test[]     @relation("SemesterTests")
+}
+
+// ----------------------------------
+// Tests / courses
+// ----------------------------------
 model Test {
+  id             Int         @id @default(autoincrement())
+  title          String
+  durationMins   Int
+  availableFrom  DateTime?
+  availableTo    DateTime?
+
+  session        Session     @relation("SessionTests", fields: [sessionId], references: [id])
+  sessionId      Int
+
+  semester       Semester    @relation("SemesterTests", fields: [semesterId], references: [id])
+  semesterId     Int
+
+  questions      Question[]                              // one-to-many
+  takers         TestTaker[] @relation("TestTakers")     // join entries
+  createdBy      User?       @relation("TestCreators", fields: [createdById], references: [id])
+  createdById    String?
+}
+
+// ----------------------------------
+// Explicit Join: User <-> Test 
+// ----------------------------------
+model TestTaker {
   id           Int       @id @default(autoincrement())
-  title        String
-  durationMins Int
-  startTime    DateTime?
-  endTime      DateTime?
-  settings     Json?
+  user         User      @relation("TestTakers", fields: [userId], references: [id])
+  userId       String
+  test         Test      @relation("TestTakers", fields: [testId], references: [id])
+  testId       Int
 
-  // who created this test
-  createdBy   User?   @relation("TestCreators", fields: [createdById], references: [id])
-  createdById String?
+  registeredAt DateTime  @default(now())
+  score        Float?
+  startedAt    DateTime?
+  completedAt  DateTime?
 
-  // questions in this test
-  questions Question[] @relation("TestQuestions")
+  @@unique([userId, testId])
+  @@map("_TestTakers")
+}
 
-  // students who took (or will take) this test
-  takers User[] @relation("TestTakers")
+// ----------------------------------
+// Questions & Options
+// ----------------------------------
+model Question {
+  id           Int       @id @default(autoincrement())
+  text         String
+  difficulty   Int?
+
+  test         Test      @relation(fields: [testId], references: [id])
+  testId       Int
+
+  createdBy    User      @relation("QuestionAuthor", fields: [createdById], references: [id])
+  createdById  String
+
+  options      Option[]
+}
+
+model Option {
+  id          Int      @id @default(autoincrement())
+  label       String
+  text        String
+  isCorrect   Boolean
+
+  question    Question @relation(fields: [questionId], references: [id])
+  questionId  Int
+
+  @@unique([questionId, label])
 }

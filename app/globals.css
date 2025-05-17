@@ -40,3 +40,25 @@ a {
     color-scheme: dark;
   }
 }
+
+
+/* Global styles for the grid container */
+:root {
+  /* Question Grid Specific Variables */
+  --card-bg: #ffffff;
+  --text-secondary: #6c757d;
+  --accent-light: #e7f5ff;
+  --success-bg: #ebfbee;
+  --success-color: #2b8a3e;
+  --warning-bg: #fff3bf;
+  --warning-color: #e67700;
+}
+
+[data-theme="dark"] {
+  --card-bg: #2b2b2b;
+  --text-secondary: #adb5bd;
+  --accent-light: #1a3d5c;
+  --dark-success-bg: #1a3a1a;
+  --dark-warning-bg: #3a2e0f;
+  --dark-bg-secondary: #343a40;
+}

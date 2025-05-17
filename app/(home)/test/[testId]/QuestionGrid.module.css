@@ -1,0 +1,89 @@
+/* app/(home)/test/[testId]/QuestionGrid.module.css */
+
+.gridContainer {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    background-color: var(--card-bg);
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  }
+  
+  .gridTitle {
+    font-size: 1.1rem;
+    margin-bottom: 1rem;
+    color: var(--text-secondary);
+    font-weight: 500;
+  }
+  
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(3rem, 1fr));
+    gap: 0.75rem;
+    margin-top: 1rem;
+  }
+  
+  .gridItem {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.25rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+  }
+  
+  .gridItem:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  .current {
+    border-color: var(--accent-color);
+    background-color: var(--accent-light);
+    color: var(--accent-color);
+  }
+  
+  .answered {
+    background-color: var(--success-bg);
+    color: var(--success-color);
+  }
+  
+  .unanswered {
+    background-color: var(--warning-bg);
+    color: var(--warning-color);
+  }
+  
+  /* Dark mode adjustments */
+  [data-theme="dark"] .gridItem {
+    background-color: var(--dark-bg-secondary);
+  }
+  
+  [data-theme="dark"] .answered {
+    background-color: var(--dark-success-bg);
+  }
+  
+  [data-theme="dark"] .unanswered {
+    background-color: var(--dark-warning-bg);
+  }
+  
+  /* Responsive adjustments */
+  @media (max-width: 768px) {
+    .gridContainer {
+      padding: 1rem;
+    }
+  
+    .grid {
+      grid-template-columns: repeat(auto-fill, minmax(2.5rem, 1fr));
+      gap: 0.5rem;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .grid {
+      grid-template-columns: repeat(auto-fill, minmax(2.2rem, 1fr));
+    }
+  }
