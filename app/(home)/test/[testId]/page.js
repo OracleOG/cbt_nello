@@ -1,17 +1,18 @@
 // app/tests/[testId]/page.jsx
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import TestTimer from './TestTimer';
 import QuestionGrid from './QuestionGrid';
 import styles from './TestPage.module.css';
 
-export default function TestPage({ params }) {
+export default function TestPage(props) {
+  const params = use(props.params);
   const { data: session } = useSession();
   const router = useRouter();
   const { testId } = params;
-  
+
   const [testData, setTestData] = useState(null);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState({});
