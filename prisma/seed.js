@@ -106,8 +106,8 @@ async function main() {
     data: {
       title: 'Management 101',
       durationMins: 60,
-      availableFrom: new Date('2025-06-01T08:00:00Z'),
-      availableTo: new Date('2025-06-01T10:00:00Z'),
+      status: 'ENABLED',
+      
       sessionId: spring2025.id,
       semesterId: sem1.id,
     }

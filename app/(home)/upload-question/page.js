@@ -71,6 +71,10 @@ export default function TestCreator() {
     fetchSemesters();
   }, [testDetails.sessionId]);
 
+  useEffect(() => {
+    document.body.classList.add('ready');
+  }, []);
+
   async function parseQuestions(text) {
     const lines = text.split(/\r?\n/).map(l => l.trim());
     const questions = [];

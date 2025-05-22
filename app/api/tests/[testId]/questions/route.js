@@ -1,27 +1,23 @@
+// app/api/tests/[testId]/questions/route.js
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/authOptions";
+import { getSession } from "@/auth";
 import prisma from "@/lib/prisma";
-import { getApiRouteSession } from "@/lib/next-auth-utils";
+import { shuffleWithSeed } from "@/lib/shuffle";
 
-
-export async function GET(request, context) {
+export async function GET(request, { params }) {
   try {
-    const testId = await context.params.testId; // Removed 'await' from params
-
-    const session = await getServerSession(authOptions)
-    
-    
+    const session = await getSession(request);
     if (!session?.user) {
-      return new NextResponse(
-        JSON.stringify({ error: "Unauthorized" }), 
-        { status: 401, headers: { 'Content-Type': 'application/json' } }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    // Fetch test with questions
+    const testId = Number(params.testId);
+    
     const test = await prisma.test.findUnique({
-      where: { id: Number(testId) },
+      where: { 
+        id: testId,
+        status: "ENABLED"
+      },
       include: {
         questions: {
           select: {
@@ -30,7 +26,6 @@ export async function GET(request, context) {
             options: {
               select: {
                 id: true,
-                label: true,
                 text: true,
                 isCorrect: true
               }
@@ -40,39 +35,23 @@ export async function GET(request, context) {
       }
     });
 
-    if (!test) {
-      return new NextResponse(
-        JSON.stringify({ error: "Test not found" }),
-        { status: 404, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
+    if (!test) return NextResponse.json({ error: "Test not found" }, { status: 404 });
 
-    // Simple shuffle - for better randomization consider a proper algorithm
-    const shuffledQuestions = [...test.questions].sort(() => Math.random() - 0.5);
+    // Deterministic shuffle
+    const seed = `${session.user.id}-${testId}`;
+    const shuffledQuestions = shuffleWithSeed(test.questions, seed);
 
-    return new NextResponse(
-      JSON.stringify({
-        testId: test.id,
-        durationMins: 5,//test.durationMins,
-        questions: shuffledQuestions
-      }),
-      { 
-        status: 200,
-        headers: { 'Content-Type': 'application/json' } 
-      }
-    );
+    return NextResponse.json({
+      questions: shuffledQuestions.map(question => ({
+        ...question,
+        options: shuffleWithSeed(question.options, seed + question.id)
+      }))
+    });
 
   } catch (error) {
-    console.error("Error fetching test questions:", error);
-    return new NextResponse(
-      JSON.stringify({ 
-        error: "Failed to fetch test questions",
-        details: error.message 
-      }),
-      { 
-        status: 500,
-        headers: { 'Content-Type': 'application/json' } 
-      }
+    return NextResponse.json(
+      { error: "Failed to fetch questions", details: error.message },
+      { status: 500 }
     );
   }
 }

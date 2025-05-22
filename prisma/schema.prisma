@@ -70,12 +70,17 @@ model Semester {
 // ----------------------------------
 // Tests / courses
 // ----------------------------------
+
+enum TestStatus {
+  ENABLED
+  DISABLED
+}
+
 model Test {
   id             Int         @id @default(autoincrement())
   title          String
   durationMins   Int
-  availableFrom  DateTime?
-  availableTo    DateTime?
+  status         TestStatus  @default(DISABLED)
 
   session        Session     @relation("SessionTests", fields: [sessionId], references: [id])
   sessionId      Int
@@ -103,6 +108,9 @@ model TestTaker {
   score        Float?
   startedAt    DateTime?
   completedAt  DateTime?
+  timeRemaining Int?     // 👈 Add this
+
+  answers      Json?   // JSON-encoded answers
 
   @@unique([userId, testId])
   @@map("_TestTakers")
