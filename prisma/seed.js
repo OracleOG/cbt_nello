@@ -67,16 +67,16 @@ async function main() {
 
   // 3. Seed Sessions and Semesters
   console.log('Creating sessions and semesters...');
-  const [spring2025, fall2025] = await Promise.all([
+  const [S2024_2025, S2025_2026] = await Promise.all([
     prisma.session.upsert({
-      where: { code: 'SP2025' },
+      where: { code: '24/25' },
       update: {},
-      create: { code: 'SP2025', name: 'Spring 2025' },
+      create: { code: '24/25', name: '2024/2025' },
     }),
     prisma.session.upsert({
-      where: { code: 'FA2025' },
+      where: { code: '25/26' },
       update: {},
-      create: { code: 'FA2025', name: 'Fall 2025' },
+      create: { code: '25/26', name: '2025/2026' },
     }),
   ]);
 
@@ -84,12 +84,12 @@ async function main() {
     prisma.semester.upsert({
       where: { code: 'SEM1' },
       update: {},
-      create: { code: 'SEM1', name: 'Semester 1', sessionId: spring2025.id },
+      create: { code: 'SEM1', name: 'Semester 1', sessionId: S2025_2026.id },
     }),
     prisma.semester.upsert({
       where: { code: 'SEM2' },
       update: {},
-      create: { code: 'SEM2', name: 'Semester 2', sessionId: spring2025.id },
+      create: { code: 'SEM2', name: 'Semester 2', sessionId: S2025_2026.id },
     }),
   ]);
 
@@ -108,8 +108,8 @@ async function main() {
       durationMins: 60,
       status: 'ENABLED',
       
-      sessionId: spring2025.id,
-      semesterId: sem1.id,
+      sessionId: S2025_2026.id,
+      semesterId: sem2.id,
     }
   });
 

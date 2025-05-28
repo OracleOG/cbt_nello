@@ -1,23 +1,23 @@
 // app/api/create-bulk-test/route.js
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth/next";
-import { authOptions } from "@/lib/authOptions";
+import { getSession } from "@/lib/auth";
 import prisma from "@/lib/prisma";
 
 export async function POST(request) {
   try {
     // 1. Authentication & Authorization
-    const session = await getServerSession(authOptions, request);
-    if (!session?.user || session.user.role !== "ADMIN") {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-    }
+    const session = await getSession(request);
+        if (!session?.user) {
+          return NextResponse.json(
+            { error: "Unauthorized" }, 
+            { status: 401 }
+          );
+        }
 
     // 2. Parse and validate request body
     const { 
       title,
       durationMins,
-      availableFrom,
-      availableTo,
       sessionId,
       semesterId,
       questions
@@ -42,12 +42,11 @@ export async function POST(request) {
     const test = await prisma.test.create({
       data: {
         title,
-        durationMins: Number(durationMins),
-        availableFrom: availableFrom ? new Date(availableFrom) : null,
-        availableTo: availableTo ? new Date(availableTo) : null,
+        durationMins: Number(durationMins) || 60, // Default to 60 mins if not provided
         session: { connect: { id: Number(sessionId) } },
         semester: { connect: { id: Number(semesterId) } },
-        createdBy: { connect: { id: session.user.id } }
+        createdBy: { connect: { id: session.user.id } },
+        status: "DISABLED" // Default status
       },
       select: { id: true }
     });

@@ -20,8 +20,31 @@ export default function TestPage({ params }) {
     answers: {},
     timeRemaining: 0,
     questions: [],
-    currentIndex: 0
+    currentIndex: 0,
+    testDetails: null // Added to store test metadata separately
   });
+
+  const loadQuestions = async () => {
+    try {
+      const questionsRes = await fetch(`/api/tests/${testId}/questions`);
+      
+      if (!questionsRes.ok) {
+        const errorData = await questionsRes.json().catch(() => ({}));
+        throw new Error(errorData.error || 'Failed to load questions');
+      }
+
+      const { questions } = await questionsRes.json();
+      return questions;
+    } catch (err) {
+      setState(prev => ({
+        ...prev,
+        error: err.message,
+        loading: false
+      }));
+      return []; // Return empty array as fallback
+    }
+  };
+
 
   // Initialize exam
   useEffect(() => {
@@ -49,57 +72,37 @@ export default function TestPage({ params }) {
         
         if (initData.error) throw new Error(initData.error);
 
-        // 3. Load questions
-        const questionsRes = await fetch(`/api/tests/${testId}/questions`);
-        const { questions } = await questionsRes.json();
+        // 3. Load questions and test details
+        const [questions, testRes] = await Promise.all([
+          loadQuestions(),
+          fetch(`/api/tests/${testId}`)
+        ]);
+        
+        const { test } = await testRes.json();
 
         setState(prev => ({
           ...prev,
           ...initData,
           questions,
+          testDetails: test, // Store test details separately
           loading: false
         }));
 
-        // 4. Start timer
-        workerRef.current = new Worker(new URL('../../../../public/workers/timer.worker.js', import.meta.url));
-        workerRef.current.postMessage({ 
-          action: 'start', 
-          duration: initData.timeRemaining 
-        });
+        // 4. Start timer only if we have valid time remaining
+        if (initData.timeRemaining > 0) {
+          workerRef.current = new Worker(new URL('../../../../public/workers/timer.worker.js', import.meta.url));
+          workerRef.current.postMessage({ 
+            action: 'start', 
+            duration: initData.timeRemaining 
+          });
 
-        workerRef.current.onmessage = (e) => {
-          if (e.data.action === 'timeout') handleSubmit();
-          else setState(prev => ({ ...prev, timeRemaining: e.data.remaining }));
-        };
+          workerRef.current.onmessage = (e) => {
+            if (e.data.action === 'timeout') handleSubmit();
+            else setState(prev => ({ ...prev, timeRemaining: e.data.remaining }));
+          };
+        }
 
       } catch (err) {
-        setState(prev => ({
-          ...prev,
-          error: err.message,
-          loading: false
-        }));
-      }
-    };
-
-    initializeExam();
-
-    return () => workerRef.current?.terminate();
-  }, [session, testId]);
-
-  // Auto-save mechanism
-  useEffect(() => {
-    const saveProgress = async () => {
-      try {
-        await fetch(`/api/tests/${testId}/save`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            attemptId: state.attemptId,
-            answers: state.answers,
-            timeRemaining: state.timeRemaining
-          })
-        });
-      } catch (error) {
         localStorage.setItem(`test-${testId}`, JSON.stringify({
           answers: state.answers,
           timeRemaining: state.timeRemaining,
@@ -109,16 +112,57 @@ export default function TestPage({ params }) {
       }
     };
 
-    const interval = setInterval(saveProgress, 30000);
-    const beforeUnload = () => saveProgress();
-    window.addEventListener('beforeunload', beforeUnload);
+    initializeExam();
 
-    return () => {
-      clearInterval(interval);
-      window.removeEventListener('beforeunload', beforeUnload);
-    };
-  }, [state.answers, state.timeRemaining, state.attemptId, testId]);
+    return () => workerRef.current?.terminate();
+  }, [session, testId]);
 
+
+  // Auto-save mechanism
+  // In TestPage component
+useEffect(() => {
+  const saveProgress = async () => {
+    if (Object.keys(state.answers).length === 0) return;
+    
+    try {
+      await fetch(`/api/tests/${testId}/save`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          attemptId: state.attemptId,
+          answers: state.answers,
+          timeRemaining: state.timeRemaining
+        })
+      });
+    } catch (error) {
+      console.error("Auto-save failed:", error);
+    }
+  };
+
+  // Save when answers change (debounced)
+  const debounceTimer = setTimeout(() => {
+    saveProgress();
+  }, 5000); // 5 second debounce
+
+  // Periodic save every 15 minutes
+  const interval = setInterval(saveProgress, 15 * 60 * 1000);
+  
+  const beforeUnload = () => {
+    saveProgress();
+    // Small delay to allow save to complete
+    return new Promise(resolve => setTimeout(resolve, 500));
+  };
+
+  window.addEventListener('beforeunload', beforeUnload);
+
+  return () => {
+    clearTimeout(debounceTimer);
+    clearInterval(interval);
+    window.removeEventListener('beforeunload', beforeUnload);
+  };
+  }, [state.answers, testId]); // Only run when answers change
+
+  
   const handleAnswerSelect = (questionId, optionId) => {
     setState(prev => ({
       ...prev,
@@ -172,16 +216,22 @@ export default function TestPage({ params }) {
     </div>
   );
 
+  // Safely handle questions
+  if (!state.questions.length) {
+    return <div className={styles.error}>No questions available for this test</div>;
+  }
+
   const currentQuestion = state.questions[state.currentIndex];
   const totalQuestions = state.questions.length;
 
   return (
     <div className={styles.container}>
       <header className={styles.header}>
-        <h1>Test: {currentQuestion.test?.title}</h1>
+        {/* Use testDetails instead of currentQuestion.test */}
+        <h1>Test: {state.testDetails?.title || 'Untitled Test'}</h1>
         <TestTimer 
           timeRemaining={state.timeRemaining} 
-          durationMins={currentQuestion.test?.durationMins} 
+          durationMins={state.testDetails?.durationMins} 
         />
       </header>
 

@@ -7,8 +7,6 @@ export default function TestCreator() {
   const [testDetails, setTestDetails] = useState({
     title: '',
     durationMins: 60,
-    availableFrom: '',
-    availableTo: '',
     sessionId: '',
     semesterId: ''
   });
@@ -223,28 +221,15 @@ export default function TestCreator() {
         return;
       }
 
-      const testRes = await fetch('/api/tests', {
+      const questionsRes = await fetch('/api/create-bulk-test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: testDetails.title,
           durationMins: Number(testDetails.durationMins),
-          availableFrom: testDetails.availableFrom || null,
-          availableTo: testDetails.availableTo || null,
           sessionId: Number(testDetails.sessionId),
           semesterId: Number(testDetails.semesterId),
-          createdById: session.user.id
-        })
-      });
-
-      if (!testRes.ok) throw new Error('Failed to create test');
-      const { id: testId } = await testRes.json();
-
-      const questionsRes = await fetch('/api/bulk-questions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          testId,
+          createdById: session.user.id,
           questions: questions.map(q => ({
             text: q.text,
             options: q.options.map(opt => ({
@@ -256,14 +241,13 @@ export default function TestCreator() {
         })
       });
 
-      if (!questionsRes.ok) throw new Error('Failed to create questions');
+      if (!questionsRes.ok) throw new Error('Failed to create Test and questions');
       
       alert('Test created successfully!');
       setTestDetails({
         title: '',
         durationMins: 60,
-        availableFrom: '',
-        availableTo: '',
+        
         sessionId: '',
         semesterId: ''
       });
@@ -287,7 +271,7 @@ export default function TestCreator() {
             <input
               value={testDetails.title}
               onChange={(e) => setTestDetails({...testDetails, title: e.target.value})}
-              placeholder="Intro to Management Midterm"
+              placeholder="Name of course"
             />
             {errors.title && <span className="error">{errors.title}</span>}
           </div>
@@ -301,25 +285,7 @@ export default function TestCreator() {
               min="1"
             />
             {errors.durationMins && <span className="error">{errors.durationMins}</span>}
-          </div>
-          
-          <div>
-            <label>Available From</label>
-            <input
-              type="datetime-local"
-              value={testDetails.availableFrom}
-              onChange={(e) => setTestDetails({...testDetails, availableFrom: e.target.value})}
-            />
-          </div>
-          
-          <div>
-            <label>Available To</label>
-            <input
-              type="datetime-local"
-              value={testDetails.availableTo}
-              onChange={(e) => setTestDetails({...testDetails, availableTo: e.target.value})}
-            />
-          </div>
+          </div>  
           
           <div>
             <label>Session*</label>
