@@ -107,7 +107,7 @@ async function main() {
       title: 'Management 101',
       durationMins: 60,
       status: 'ENABLED',
-      
+
       sessionId: S2025_2026.id,
       semesterId: sem2.id,
     }

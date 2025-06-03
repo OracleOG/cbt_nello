@@ -4,7 +4,7 @@ import prisma from '@/lib/prisma';
 
 export async function PUT(request, { params }) {
   try {
-    const { testId } = params;
+    const { testId } = await params;
     const { status } = await request.json();
 
     const updatedTest = await prisma.test.update({

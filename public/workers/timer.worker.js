@@ -1,32 +1,35 @@
-// Timer Worker
-let timerInterval;
+// public/workers/timer.worker.js
+let timer;
+let startTime;
+let duration;
 
 self.onmessage = function(e) {
-  const { action, duration } = e.data;
-  
-  if (action === 'start') {
-    let remaining = duration;
+  if (e.data.action === 'start') {
+    startTime = e.data.startTime || Date.now();
+    duration = e.data.duration * 1000; // Convert to ms
     
-    timerInterval = setInterval(() => {
-      remaining -= 1;
-      self.postMessage({ 
-        action: 'tick', 
-        remaining,
-        formatted: formatTime(remaining)
-      });
-      
-      if (remaining <= 0) {
-        clearInterval(timerInterval);
-        self.postMessage({ action: 'timeout' });
-      }
-    }, 1000);
-  } else if (action === 'stop') {
-    clearInterval(timerInterval);
+    // Clear any existing timer
+    if (timer) clearTimeout(timer);
+    
+    tick();
+  } else if (e.data.action === 'stop') {
+    clearTimeout(timer);
+    self.postMessage({ action: 'stopped' });
   }
 };
 
-function formatTime(seconds) {
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+function tick() {
+  const elapsed = Date.now() - startTime;
+  const remaining = Math.max(0, duration - elapsed);
+  
+  self.postMessage({
+    action: 'tick',
+    remaining: Math.floor(remaining / 1000) // Convert back to seconds
+  });
+
+  if (remaining > 0) {
+    timer = setTimeout(tick, 1000);
+  } else {
+    self.postMessage({ action: 'timeout' });
+  }
 }

@@ -14,13 +14,22 @@ export default function EditTest() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  // Check admin status
+  const [isLoadingSession, setIsLoadingSession] = useState(true);
+
   useEffect(() => {
-    if (session?.user.role !== 'ADMIN') {
-      router.push('/unauthorized');
+    if (session === undefined) {
+      // Session is still loading
+      setIsLoadingSession(true);
+    } else {
+      // Session is loaded
+      setIsLoadingSession(false);
+      
+      if (session?.user?.role !== 'admin') {
+        router.push('/unauthorized');
+      }
     }
   }, [session, router]);
-
+  
   // Fetch test data
   useEffect(() => {
     async function fetchTest() {
@@ -33,13 +42,19 @@ export default function EditTest() {
         if (!testRes.ok || !questionsRes.ok) {
           throw new Error('Failed to fetch test data');
         }
-        
+        const questionsData = await questionsRes.json();
+        if (!questionsData.questions || !questionsData.questions.length) {
+          throw new Error('No questions available for this test');
+        }
+        console.log('questionsData', questionsData);
         setTest(await testRes.json());
-        setQuestions(await questionsRes.json());
+        setQuestions(questionsData.questions);
+        
       } catch (err) {
         setError(err.message);
       } finally {
         setLoading(false);
+        console.log('set_questions', questions)
       }
     }
     fetchTest();

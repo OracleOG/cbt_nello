@@ -29,13 +29,7 @@ export default function QuestionGrid({
           const isCurrent = index === currentIndex;
           const isAnswered = answeredQuestionIds.includes(question.id);
           
-          console.log(`Q${index}:`, {
-            id: question.id,
-            isCurrent,
-            isAnswered,
-            currentIndex,
-            answeredIds: answeredQuestionIds
-          });
+         
 
           return (
             <button

@@ -44,6 +44,9 @@ model User {
   testTakes        TestTaker[] @relation("TestTakers") // explicit join entries
   testsCreated     Test[]      @relation("TestCreators") // the tests this user created
   Answer           Answer[]
+  testsUpdated Test[] @relation("TestUpdatedBy")
+  @@index([username])
+
 }
 
 // ----------------------------------
@@ -93,7 +96,13 @@ model Test {
   takers      TestTaker[] @relation("TestTakers") // join entries
   createdBy   User?       @relation("TestCreators", fields: [createdById], references: [id])
   createdById String?
-}
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  updatedBy   User? @relation("TestUpdatedBy", fields: [updatedById], references: [id])
+  updatedById String?
+  description String?
+
+  }
 
 // ----------------------------------
 // Explicit Join: User <-> Test 

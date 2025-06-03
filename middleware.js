@@ -12,6 +12,12 @@ export async function middleware(request) {
     "/settings",
   ];
 
+  const adminOnlyRoutes = [
+    "/upload-question",
+    "/auth/bulk-upload",
+  ];
+
+
   if (protectedRoutes.some((route) => pathname.startsWith(route))) {
     const session = await getSession(request);
 
@@ -19,6 +25,16 @@ export async function middleware(request) {
       const loginUrl = request.nextUrl.clone();
       loginUrl.pathname = "/auth/login";
       return NextResponse.redirect(loginUrl);
+    }
+  }
+
+  if (adminOnlyRoutes.some((route) => pathname.startsWith(route))) {
+    const session = await getSession(request);
+
+    if (!session?.user || session.user.role !== "admin") {
+      const forbiddenUrl = request.nextUrl.clone();
+      forbiddenUrl.pathname = "/403";
+      return NextResponse.redirect(forbiddenUrl);
     }
   }
 

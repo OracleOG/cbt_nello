@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState, useRef, use } from 'react';
-import { useRouter } from 'next/navigation';
+import { redirect, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import TestTimer from './TestTimer';
 import QuestionGrid from './QuestionGrid';
@@ -10,7 +10,7 @@ export default function TestPage({ params }) {
   const { testId } = use(params);
   const { data: session } = useSession();
   const router = useRouter();
-  const workerRef = useRef(null);
+  const debounceRef = useRef();
   
   const [state, setState] = useState({
     loading: true,
@@ -18,10 +18,10 @@ export default function TestPage({ params }) {
     submitted: false,
     attemptId: null,
     answers: {},
-    timeRemaining: 0,
+    startTime: null,
     questions: [],
     currentIndex: 0,
-    testDetails: null // Added to store test metadata separately
+    testDetails: null
   });
 
   const loadQuestions = async () => {
@@ -41,128 +41,161 @@ export default function TestPage({ params }) {
         error: err.message,
         loading: false
       }));
-      return []; // Return empty array as fallback
+      return [];
     }
   };
 
-
-  // Initialize exam
+  const calculateElapsedTime = (startTime) => {
+    return Math.floor((Date.now() - new Date(startTime).getTime()) / 1000);
+  };
+  
+  const syncTimeFromServer = async () => {
+    try {
+      const res = await fetch(`/api/tests/${testId}/resume-test`);
+      if (res.ok) {
+        const { startedAt } = await res.json();
+        setState(prev => ({ ...prev, startTime: startedAt }));
+      }
+    } catch (err) {
+      console.error('Server sync failed');
+      const savedState = localStorage.getItem(`test-${testId}-${session.user.id}`);
+      if (savedState) {
+        const { startTime } = JSON.parse(savedState);
+        setState(prev => ({ ...prev, startTime }));
+      }
+    }
+  };
+  
+  const debouncedSaveToLocalStorage = () => {
+    clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      const saveData = {
+        answers: state.answers,
+        startTime: state.startTime,
+        attemptId: state.attemptId,
+        currentIndex: state.currentIndex,
+        timestamp: Date.now()
+      };
+      localStorage.setItem(`test-${testId}-${session.user.id}`, JSON.stringify(saveData));
+    }, 1000);
+  };
+  
   useEffect(() => {
     if (!session) return;
 
     const initializeExam = async () => {
       try {
-        // 1. Check localStorage fallback
-        const savedState = localStorage.getItem(`test-${testId}`);
+        const savedState = localStorage.getItem(`test-${testId}-${session.user.id}`);
         if (savedState) {
-          const { answers, timeRemaining, attemptId, timestamp } = JSON.parse(savedState);
-          if (Date.now() - timestamp < 300000) { // 5m validity
+          const parsedState = JSON.parse(savedState);
+          if (Date.now() - parsedState.timestamp < 300000) {
             setState(prev => ({
               ...prev,
-              answers,
-              timeRemaining,
-              attemptId
+              answers: parsedState.answers,
+              startTime: parsedState.startTime,
+              attemptId: parsedState.attemptId,
+              currentIndex: parsedState.currentIndex || 0,
+              loading: false
             }));
+            return;
           }
         }
 
-        // 2. Initialize with server
-        const initRes = await fetch(`/api/tests/${testId}/init`, { method: 'POST' });
-        const initData = await initRes.json();
-        
-        if (initData.error) throw new Error(initData.error);
-
-        // 3. Load questions and test details
-        const [questions, testRes] = await Promise.all([
-          loadQuestions(),
+        const [initRes, questionsRes, testRes] = await Promise.all([
+          fetch(`/api/tests/${testId}/init`, { method: 'POST' }),
+          fetch(`/api/tests/${testId}/questions`),
           fetch(`/api/tests/${testId}`)
         ]);
-        
-        const { test } = await testRes.json();
+
+        const [initData, questionsData, testData] = await Promise.all([
+          initRes.json(),
+          questionsRes.json(),
+          testRes.json()
+        ]);
+
+        if (initData.error) throw new Error(initData.error);
+        if (questionsData.error) throw new Error(questionsData.error);
+        if (testData.error) throw new Error(testData.error);
 
         setState(prev => ({
           ...prev,
           ...initData,
-          questions,
-          testDetails: test, // Store test details separately
+          questions: questionsData.questions || [],
+          testDetails: testData.test,
+          startTime: initData.startedAt || new Date().toISOString(),
           loading: false
         }));
 
-        // 4. Start timer only if we have valid time remaining
-        if (initData.timeRemaining > 0) {
-          workerRef.current = new Worker(new URL('../../../../public/workers/timer.worker.js', import.meta.url));
-          workerRef.current.postMessage({ 
-            action: 'start', 
-            duration: initData.timeRemaining 
-          });
-
-          workerRef.current.onmessage = (e) => {
-            if (e.data.action === 'timeout') handleSubmit();
-            else setState(prev => ({ ...prev, timeRemaining: e.data.remaining }));
-          };
-        }
-
       } catch (err) {
-        localStorage.setItem(`test-${testId}`, JSON.stringify({
-          answers: state.answers,
-          timeRemaining: state.timeRemaining,
-          attemptId: state.attemptId,
-          timestamp: Date.now()
+        console.error("Initialization error:", err);
+        setState(prev => ({
+          ...prev,
+          error: err.message,
+          loading: false
         }));
       }
     };
 
     initializeExam();
 
-    return () => workerRef.current?.terminate();
+    return () => {
+      clearTimeout(debounceRef.current);
+    };
   }, [session, testId]);
 
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (state.loading) {
+        setState(prev => ({
+          ...prev,
+          loading: false,
+          error: 'Loading timed out. Please refresh the page.'
+        }));
+      }
+    }, 30000);
 
-  // Auto-save mechanism
-  // In TestPage component
-useEffect(() => {
-  const saveProgress = async () => {
-    if (Object.keys(state.answers).length === 0) return;
+    return () => clearTimeout(timeout);
+  }, [state.loading]);
+
+  useEffect(() => {
+    const saveProgress = async () => {
+      if (Object.keys(state.answers).length === 0) return;
+      
+      try {
+        await fetch(`/api/tests/${testId}/save`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            attemptId: state.attemptId,
+            answers: state.answers,
+            timeRemaining: state.timeRemaining
+          })
+        });
+      } catch (error) {
+        console.error("Auto-save failed:", error);
+      }
+    };
+
+    const debounceTimer = setTimeout(() => {
+      saveProgress();
+    }, 5000);
+
+    const interval = setInterval(saveProgress, 15 * 60 * 1000);
     
-    try {
-      await fetch(`/api/tests/${testId}/save`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          attemptId: state.attemptId,
-          answers: state.answers,
-          timeRemaining: state.timeRemaining
-        })
-      });
-    } catch (error) {
-      console.error("Auto-save failed:", error);
-    }
-  };
+    const beforeUnload = () => {
+      saveProgress();
+      return new Promise(resolve => setTimeout(resolve, 500));
+    };
 
-  // Save when answers change (debounced)
-  const debounceTimer = setTimeout(() => {
-    saveProgress();
-  }, 5000); // 5 second debounce
+    window.addEventListener('beforeunload', beforeUnload);
 
-  // Periodic save every 15 minutes
-  const interval = setInterval(saveProgress, 15 * 60 * 1000);
-  
-  const beforeUnload = () => {
-    saveProgress();
-    // Small delay to allow save to complete
-    return new Promise(resolve => setTimeout(resolve, 500));
-  };
+    return () => {
+      clearTimeout(debounceTimer);
+      clearInterval(interval);
+      window.removeEventListener('beforeunload', beforeUnload);
+    };
+  }, [state.answers, testId, state.attemptId, state.timeRemaining]);
 
-  window.addEventListener('beforeunload', beforeUnload);
-
-  return () => {
-    clearTimeout(debounceTimer);
-    clearInterval(interval);
-    window.removeEventListener('beforeunload', beforeUnload);
-  };
-  }, [state.answers, testId]); // Only run when answers change
-
-  
   const handleAnswerSelect = (questionId, optionId) => {
     setState(prev => ({
       ...prev,
@@ -171,6 +204,7 @@ useEffect(() => {
         [questionId]: optionId
       }
     }));
+    debouncedSaveToLocalStorage();
   };
 
   const handleQuestionNavigation = (index) => {
@@ -196,7 +230,7 @@ useEffect(() => {
         ...prev,
         submitted: true
       }));
-      localStorage.removeItem(`test-${testId}`);
+      localStorage.removeItem(`test-${testId}-${session.user.id}`);
       
     } catch (err) {
       setState(prev => ({
@@ -216,7 +250,6 @@ useEffect(() => {
     </div>
   );
 
-  // Safely handle questions
   if (!state.questions.length) {
     return <div className={styles.error}>No questions available for this test</div>;
   }
@@ -227,10 +260,9 @@ useEffect(() => {
   return (
     <div className={styles.container}>
       <header className={styles.header}>
-        {/* Use testDetails instead of currentQuestion.test */}
         <h1>Test: {state.testDetails?.title || 'Untitled Test'}</h1>
         <TestTimer 
-          timeRemaining={state.timeRemaining} 
+          startTime={state.startTime}
           durationMins={state.testDetails?.durationMins} 
         />
       </header>

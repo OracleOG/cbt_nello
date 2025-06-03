@@ -117,3 +117,115 @@
     color: #2ecc71;
     margin-bottom: 1rem;
   }
+
+
+  /* New styles to achieve a one page view layout for test taking */
+
+  .container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    background-color: #f5f5f5;
+    overflow: hidden;
+  }
+  
+  .header {
+    background-color: #2c3e50;
+    color: white;
+    padding: 0.5rem 1rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+  }
+  
+  .main {
+    flex: 1;
+    padding: 1rem;
+    overflow-y: auto;
+    max-width: 800px;
+    margin: 0 auto;
+    width: 100%;
+  }
+  
+  .questionContainer {
+    background: rgb(51, 50, 54);
+    border-radius: 8px;
+    padding: 1rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  
+  .questionHeader {
+    margin-bottom: 0.5rem;
+    color: #666;
+    font-size: 0.9rem;
+  }
+  
+  .questionText {
+    font-size: 1rem;
+    margin-bottom: 1rem;
+    font-weight: 500;
+  }
+  
+  .options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+  
+  .option {
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+  }
+  
+  .navigation {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 1rem;
+  }
+  
+  .navigation button {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+  }
+  
+  .footer {
+    background-color: white;
+    padding: 0.5rem;
+    border-top: 1px solid #eee;
+    flex-shrink: 0;
+  }
+  
+  .submitButton {
+    background-color: #e74c3c;
+    color: white;
+    padding: 0.6rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    margin-top: 0.5rem;
+    width: 100%;
+  }
+  
+  /* Adjust QuestionGrid styles if needed */
+  .questionGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(30px, 1fr));
+    gap: 5px;
+    margin-bottom: 0.5rem;
+  }
+  
+  .questionGrid button {
+    width: 30px;
+    height: 30px;
+    padding: 0;
+    font-size: 0.8rem;
+  }

@@ -20,9 +20,15 @@ export async function POST(request, { params }) {
       where: {
         userId: session.user.id,
         testId: Number(testId),
-        completedAt: null
+        
       }
     });
+
+    // If an existing attempt is found, but has already been completed
+    if (existingAttempt && existingAttempt.completedAt) {
+      return NextResponse.json({ error: "Test already completed" }, { status: 403 });
+    }
+    // If an existing attempt is found and is still in progress, return it
 
     if (existingAttempt) {
       return NextResponse.json({
@@ -34,22 +40,30 @@ export async function POST(request, { params }) {
     }
 
     // Create new attempt
+    // Get the test data to access duration
+    const test = await prisma.test.findUnique({
+      where: { id: Number(testId) },
+      select: { durationMins: true }
+    });
+    
+    if (!test) {
+      return NextResponse.json({ error: "Test not found" }, { status: 404 });
+    }
+    
     const newAttempt = await prisma.testTaker.create({
       data: {
-        
-        startedAt: new Date(),
-        answers: {},
-        timeRemaining: 300, // 5 minutes default
-        user: { connect: { id: session.user.id } },
-        test: { connect: { id: Number(testId) } }
-        
+      startedAt: new Date(),
+      answers: {},
+      timeRemaining: test.durationMins, // Set from test's duration
+      user: { connect: { id: session.user.id } },
+      test: { connect: { id: Number(testId) } }
       }
     });
 
     return NextResponse.json({
       resumed: false,
       attemptId: newAttempt.id,
-      timeRemaining: newAttempt.timeRemaining
+      startedAt: newAttempt.startedAt,
     });
 
   } catch (error) {

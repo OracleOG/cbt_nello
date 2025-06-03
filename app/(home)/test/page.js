@@ -16,20 +16,24 @@ export default function TestManagement() {
     sessionId: '',
     semesterId: ''
   });
-  const user = session?.user || {};
-  console.log('User Role: ', user.role)
-  console.log("Session obj", session)
+  const [isLoadingSession, setIsLoadingSession] = useState(true);
 
-  // Check admin status
-//  useEffect(() => {
-//    if (!session) return;
-//    
-//    if (session?.user.role !== 'ADMIN') {
-//        console.log('User Role: ', session.user.role)
-//      router.push('/unauthorized');
-//    }
-//  }, [session, router]);
+  useEffect(() => {
+    if (session === undefined) {
+      // Session is still loading
+      setIsLoadingSession(true);
+    } else {
+      // Session is loaded
+      setIsLoadingSession(false);
+      
+      if (session?.user?.role !== 'admin') {
+        router.push('/unauthorized');
+      }
+    }
+  }, [session, router]);
+  
 
+  
   // Fetch sessions
   useEffect(() => {
     async function fetchSessions() {
@@ -85,6 +89,10 @@ export default function TestManagement() {
     fetchTests();
   }, [filters.sessionId, filters.semesterId]);
 
+  if (isLoadingSession) {
+    return <div>Loading...</div>;
+  }
+
   const toggleTestStatus = async (testId, currentStatus) => {
     try {
       const res = await fetch(`/api/tests/${testId}/status`, {
@@ -95,11 +103,13 @@ export default function TestManagement() {
         })
       });
       if (!res.ok) throw new Error('Failed to update test status');
+
+      const updatedTest = await res.json();
       
       // Update local state
       setTests(tests.map(test => 
         test.id === testId 
-          ? { ...test, status: currentStatus === 'ENABLED' ? 'DISABLED' : 'ENABLED' }
+          ? { ...test, status: updatedTest.status }
           : test
       ));
     } catch (err) {

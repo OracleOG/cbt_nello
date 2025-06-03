@@ -38,6 +38,20 @@ export async function POST(request) {
       );
     }
 
+    if (!session?.user?.id) {
+      throw new Error("Missing user session.");
+    }
+    
+    const userId = session.user.id;
+    
+    const existingUser = await prisma.user.findUnique({
+      where: { id: userId }
+    });
+    
+    if (!existingUser) {
+      throw new Error(`User with id ${userId} not found in database.`);
+    }
+
     // 3. Create test record first
     const test = await prisma.test.create({
       data: {

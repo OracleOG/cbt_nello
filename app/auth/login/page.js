@@ -1,71 +1,92 @@
-'use client'
+'use client';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { signInSchema } from '@/lib/zod';
+import { signIn, useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import styles from './login.module.css';
 
-import { useForm } from "react-hook-form"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { signInSchema } from "@/lib/zod"
-import { signIn } from "next-auth/react"
-import { useRouter } from "next/navigation"
-
-export default function LoginForm() {
-  const router = useRouter()
+export default function LoginPage() {
+  const router = useRouter();
+  const { data: session } = useSession();
+  
   const {
     register,
     handleSubmit,
     formState: { errors, isSubmitting }
   } = useForm({
     resolver: zodResolver(signInSchema),
-  })
+  });
+
+  useEffect(() => {
+    if (session) {
+      router.push('/dashboard');
+    }
+  }, [session, router]);
 
   const onSubmit = async (data) => {
     const result = await signIn('credentials', {
       redirect: false,
       username: data.username,
       password: data.password,
-    })
+      callbackUrl: '/dashboard'
+    });
 
-    if (result?.ok) {
-      router.push('/dashboard')
-    } else {
-      alert(result?.error || 'Invalid credentials')
+    if (result?.error) {
+      alert(result.error);
     }
-  }
+  };
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)}
-    method="POST"
-    action="api/auth/callback/credentials"
-    autoComplete="on">
-      <div>
-        <label htmlFor="username">Username</label>
-        <input
-          type="text"
-          id="username"
-          {...register('username')}
-          autoComplete="username"
-          name="username"
-        />
-        {errors.username && (
-          <p>{errors.username.message}</p>
-        )}
-      </div>
+    <div className={styles.loginContainer}>
+      <div className={styles.loginCard}>
+        <h1 className={styles.loginTitle}>Welcome Back</h1>
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <div className={styles.formGroup}>
+            <label className={styles.formLabel} htmlFor="username">Username</label>
+            <input
+              type="text"
+              id="username"
+              className={errors.username ? styles.formInputError : styles.formInput}
+              {...register('username')}
+            />
+            {errors.username && (
+              <span className={styles.errorMessage}>{errors.username.message}</span>
+            )}
+          </div>
 
-      <div>
-        <label htmlFor="password">Password</label>
-        <input
-          type="password"
-          id="password"
-          {...register('password')}
-          autoComplete="current-password"
-          name="password"
-        />
-        {errors.password && (
-          <p>{errors.password.message}</p>
-        )}
-      </div>
+          <div className={styles.formGroup}>
+            <label className={styles.formLabel} htmlFor="password">Password</label>
+            <input
+              type="password"
+              id="password"
+              className={errors.password ? styles.formInputError : styles.formInput}
+              {...register('password')}
+            />
+            {errors.password && (
+              <span className={styles.errorMessage}>{errors.password.message}</span>
+            )}
+          </div>
 
-      <button type="submit" disabled={isSubmitting}>
-        {isSubmitting ? 'Logging in...' : 'Log In'}
-      </button>
-    </form>
-  )
+          <button 
+            type="submit" 
+            disabled={isSubmitting}
+            className={styles.loginBtn}
+          >
+            {isSubmitting ? 'Logging in...' : 'Log In'}
+          </button>
+        </form>
+
+        <div className={styles.additionalLinks}>
+          <p>
+            <a href="/forgot-password">Forgot Password?</a>
+          </p>
+          <p>
+            Don't have an account? <a href="/register">Sign Up</a>
+          </p>
+        </div>
+      </div>
+    </div>
+  );
 }
