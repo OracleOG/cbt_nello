@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@clerk/nextjs": "^6.19.0",
     "@fortawesome/fontawesome-svg-core": "^6.7.2",
     "@fortawesome/free-solid-svg-icons": "^6.7.2",
     "@fortawesome/react-fontawesome": "^0.2.2",
@@ -17,11 +18,13 @@
     "bcryptjs": "^3.0.2",
     "next": "15.3.1",
     "next-auth": "^4.24.11",
+    "next-nprogress": "^1.4.0",
     "nextjs-progressbar": "^0.0.16",
+    "nprogress": "^0.2.0",
     "papaparse": "^5.5.2",
     "prisma": "^6.7.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "react-hook-form": "^7.56.2",
     "react-hot-toast": "^2.5.2",
     "react-table": "^7.8.0",
