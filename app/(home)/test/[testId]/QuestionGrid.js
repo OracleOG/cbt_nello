@@ -6,7 +6,7 @@ import styles from './QuestionGrid.module.css';
 export default function QuestionGrid({ 
   questions, 
   currentIndex, 
-  answeredQuestionIds, 
+  answers = {}, // Changed from answeredQuestionIds to answers
   onNavigate 
 }) {
   const [normalizedQuestions, setNormalizedQuestions] = useState([]);
@@ -21,6 +21,9 @@ export default function QuestionGrid({
     );
   }, [questions]);
 
+  // Get answered question IDs from answers object
+  const answeredQuestionIds = Object.keys(answers);
+
   return (
     <div className={styles.gridContainer}>
       <h3 className={styles.gridTitle}>Question Navigation</h3>
@@ -29,8 +32,6 @@ export default function QuestionGrid({
           const isCurrent = index === currentIndex;
           const isAnswered = answeredQuestionIds.includes(question.id);
           
-         
-
           return (
             <button
               key={question.id}
@@ -39,10 +40,7 @@ export default function QuestionGrid({
                 ${isCurrent ? styles.current : ''}
                 ${isAnswered ? styles.answered : styles.unanswered}
               `}
-              onClick={() => {
-                console.log('Navigating to:', index);
-                onNavigate(index);
-              }}
+              onClick={() => onNavigate(index)}
               aria-current={isCurrent ? 'step' : undefined}
             >
               {index + 1}

@@ -15,7 +15,7 @@ export default function Header({ darkMode, toggleTheme, toggleSidebar }) {
           <FontAwesomeIcon icon={faBars} />
         </button>
         <Link href="/dashboard" className={styles.logo}>
-          <span>ExamPro</span>
+          <span>KSHIM_Cbt</span>
         </Link>
       </div>
 

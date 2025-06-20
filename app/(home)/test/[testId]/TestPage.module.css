@@ -3,7 +3,8 @@
     display: flex;
     flex-direction: column;
     min-height: 100vh;
-    background-color: #f5f5f5;
+    background-color: var(--foreground);
+    color: var(--background)
   }
   
   .header {
@@ -24,7 +25,7 @@
   }
   
   .questionContainer {
-    background: rgb(51, 50, 54);
+    background: var(--card-bg);
     border-radius: 8px;
     padding: 2rem;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
@@ -50,16 +51,18 @@
   
   .option {
     padding: 1rem;
-    border: 1px solid #ddd;
+    border: 1px solid (--primary-light);
     border-radius: 4px;
     cursor: pointer;
     transition: all 0.2s;
     display: flex;
     gap: 0.5rem;
+    background-color: var(--card-bg);
   }
   
   .option:hover {
-    background-color: #a09da7;
+    background-color: var(--primary-light);
+    color: white;
   }
   
   .option.selected {
@@ -229,3 +232,143 @@
     padding: 0;
     font-size: 0.8rem;
   }
+
+  .loadingContainer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    gap: 1rem;
+  }
+
+  .loadingSpinner {
+    width: 50px;
+    height: 50px;
+    border: 5px solid #f3f3f3;
+    border-top: 5px solid #3498db;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  .modalOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+  }
+
+  .modal {
+    background: white;
+    padding: 2rem;
+    border-radius: 8px;
+    max-width: 500px;
+    width: 90%;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  }
+
+  .modal h3 {
+    margin: 0 0 1rem;
+    color: #333;
+  }
+
+  .modal p {
+    margin: 0 0 1.5rem;
+    color: #666;
+  }
+
+  .modalActions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+  }
+
+  .cancelButton {
+    padding: 0.5rem 1rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: rgb(235, 9, 9);
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+
+  .cancelButton:hover {
+    background-color: #b32323;
+  }
+
+  .confirmButton {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 4px;
+    background: #039c17;
+    color: white;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+
+  .confirmButton:hover {
+    background-color: #0e5818;
+  }
+
+  .confirmButton:disabled {
+    background-color: #bdc3c7;
+    cursor: not-allowed;
+  }
+
+
+  /* Styles for the question grid in the modal */
+  .navButton {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background-color: #4a6fa5;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.navButton:hover {
+  background-color: #3a5a80;
+}
+
+.navButton:disabled {
+  background-color: #cccccc;
+  cursor: not-allowed;
+}
+
+
+/* Styles for the question grid in the modal */
+.container {
+  background-color: var(--background);
+  color: var(--foreground);
+}
+
+.questionContainer {
+  background: var(--card-bg);
+}
+
+.option {
+  background-color: var(--card-bg);
+  border: 1px solid var(--primary-light);
+}
+
+.option:hover {
+  background-color: var(--primary-light);
+  color: white;
+}
+
+/* Add similar updates for other components */

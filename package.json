@@ -1,13 +1,25 @@
 {
   "name": "cbt_nello",
-  "version": "0.1.0",
-  "private": true,
+  "version": "1.0.0",
+  "description": "A computer based test application, for taking exams in a school setting",
+  "main": "middleware.js",
+  "directories": {
+    "lib": "lib"
+  },
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
   },
+  
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/OracleOG/cbt_nello/issues"
+  },
+  "homepage": "https://github.com/OracleOG/cbt_nello#readme",
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^6.7.2",
     "@fortawesome/free-solid-svg-icons": "^6.7.2",
@@ -15,7 +27,7 @@
     "@hookform/resolvers": "^5.0.1",
     "@prisma/client": "^6.7.0",
     "bcryptjs": "^3.0.2",
-    "next": "15.3.1",
+    "next": "^14.2.29",
     "next-auth": "^4.24.11",
     "nextjs-progressbar": "^0.0.16",
     "papaparse": "^5.5.2",
@@ -25,9 +37,10 @@
     "react-hook-form": "^7.56.2",
     "react-hot-toast": "^2.5.2",
     "react-table": "^7.8.0",
-    "zod": "^3.24.4"
+    "zod": "^3.24.4"  
+
   },
-  "devDependencies": {
+   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "eslint": "^9",
     "eslint-config-next": "15.3.1"

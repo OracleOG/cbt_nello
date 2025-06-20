@@ -17,6 +17,7 @@ export default function TestManagement() {
     semesterId: ''
   });
   const [isLoadingSession, setIsLoadingSession] = useState(true);
+  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
     if (session === undefined) {
@@ -116,6 +117,60 @@ export default function TestManagement() {
       console.error('Error toggling test status:', err);
     }
   };
+  const handleExportResults = async (testId) => {
+    try {
+      setIsExporting(true);
+      
+      // Create a hidden iframe for the download
+      const iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      document.body.appendChild(iframe);
+      
+      // Set the iframe src to trigger download
+      iframe.src = `/api/tests/${testId}/export`;
+      
+      // Cleanup after a delay
+      setTimeout(() => {
+        document.body.removeChild(iframe);
+        setIsExporting(false);
+      }, 5000);
+      
+    } catch (error) {
+      console.error('Error exporting results:', error);
+      alert('Failed to export results. Please try again.');
+      setIsExporting(false);
+    }
+  };
+  //const xhandleExportResults = async (testId) => {
+  //  try {
+  //    setIsExporting(true);
+  //    const response = await fetch(`/api/tests/${testId}/export`);
+  //    
+  //    if (!response.ok) {
+  //      throw new Error('Failed to export results');
+  //    }
+//
+  //    // Get the blob from the response
+  //    const blob = await response.blob();
+  //    
+  //    // Create a download link
+  //    const url = window.URL.createObjectURL(blob);
+  //    const a = document.createElement('a');
+  //    a.href = url;
+  //    a.download = `test-${testId}-results.csv`;
+  //    document.body.appendChild(a);
+  //    a.click();
+  //    
+  //    // Cleanup
+  //    window.URL.revokeObjectURL(url);
+  //    document.body.removeChild(a);
+  //  } catch (error) {
+  //    console.error('Error exporting results:', error);
+  //    alert('Failed to export results. Please try again.');
+  //  } finally {
+  //    setIsExporting(false);
+  //  }
+  //};
 
   return (
     <div className="container">
@@ -206,6 +261,13 @@ export default function TestManagement() {
                       className={`toggle-btn ${test.status.toLowerCase()}`}
                     >
                       {test.status === 'ENABLED' ? 'Disable' : 'Enable'}
+                    </button>
+                    <button
+                      onClick={() => handleExportResults(test.id)}
+                      className="export-btn"
+                      disabled={isExporting}
+                    >
+                      {isExporting ? 'Exporting...' : 'Export Results'}
                     </button>
                   </td>
                 </tr>
@@ -322,6 +384,26 @@ export default function TestManagement() {
           padding: 20px;
           text-align: center;
           color: #666;
+        }
+        
+        .export-btn {
+          padding: 6px 12px;
+          background-color: #27ae60;
+          color: white;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+          margin-left: 8px;
+          transition: background-color 0.2s;
+        }
+
+        .export-btn:hover {
+          background-color: #219a52;
+        }
+
+        .export-btn:disabled {
+          background-color: #95a5a6;
+          cursor: not-allowed;
         }
       `}</style>
     </div>

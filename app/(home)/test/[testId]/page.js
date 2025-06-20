@@ -7,7 +7,7 @@ import QuestionGrid from './QuestionGrid';
 import styles from './TestPage.module.css';
 
 export default function TestPage({ params }) {
-  const { testId } = use(params);
+  const { testId } = params;
   const { data: session } = useSession();
   const router = useRouter();
   const debounceRef = useRef();
@@ -23,6 +23,9 @@ export default function TestPage({ params }) {
     currentIndex: 0,
     testDetails: null
   });
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   const loadQuestions = async () => {
     try {
@@ -85,22 +88,11 @@ export default function TestPage({ params }) {
 
     const initializeExam = async () => {
       try {
-        const savedState = localStorage.getItem(`test-${testId}-${session.user.id}`);
-        if (savedState) {
-          const parsedState = JSON.parse(savedState);
-          if (Date.now() - parsedState.timestamp < 300000) {
-            setState(prev => ({
-              ...prev,
-              answers: parsedState.answers,
-              startTime: parsedState.startTime,
-              attemptId: parsedState.attemptId,
-              currentIndex: parsedState.currentIndex || 0,
-              loading: false
-            }));
-            return;
-          }
-        }
+        // Try loading saved exam state from localStorage
+        const savedStateRaw = localStorage.getItem(`test-${testId}-${session.user.id}`);
+        const savedState = savedStateRaw ? JSON.parse(savedStateRaw) : null;
 
+        // Fetch the latest exam data in parallel
         const [initRes, questionsRes, testRes] = await Promise.all([
           fetch(`/api/tests/${testId}/init`, { method: 'POST' }),
           fetch(`/api/tests/${testId}/questions`),
@@ -117,15 +109,54 @@ export default function TestPage({ params }) {
         if (questionsData.error) throw new Error(questionsData.error);
         if (testData.error) throw new Error(testData.error);
 
-        setState(prev => ({
-          ...prev,
+        // Merge saved values (if present and recent) with server data.
+        // If we have a valid saved state, use its startTime, answers, attemptId and currentIndex.
+        const newStartTime =
+          savedState && Date.now() - savedState.timestamp < 300000
+            ? savedState.startTime
+            : initData.startedAt || new Date().toISOString();
+
+        const newAttemptId =
+          savedState && Date.now() - savedState.timestamp < 300000
+            ? savedState.attemptId
+            : initData.attemptId;
+
+        const newAnswers =
+          savedState && Date.now() - savedState.timestamp < 300000
+            ? savedState.answers
+            : {};
+
+        const newCurrentIndex =
+          savedState && Date.now() - savedState.timestamp < 300000
+            ? savedState.currentIndex
+            : 0;
+
+        const newState = {
           ...initData,
           questions: questionsData.questions || [],
           testDetails: testData.test,
-          startTime: initData.startedAt || new Date().toISOString(),
+          startTime: newStartTime,
+          answers: newAnswers,
+          attemptId: newAttemptId,
+          currentIndex: newCurrentIndex,
           loading: false
-        }));
+        };
 
+        setState(newState);
+
+        // Persist all relevant state to localStorage, including questions if desired.
+        localStorage.setItem(
+          `test-${testId}-${session.user.id}`,
+          JSON.stringify({
+            answers: newState.answers,
+            startTime: newState.startTime,
+            attemptId: newState.attemptId,
+            currentIndex: newState.currentIndex,
+            timestamp: Date.now(),
+            // Optionally also store questions if they rarely change:
+            questions: newState.questions 
+          })
+        );
       } catch (err) {
         console.error("Initialization error:", err);
         setState(prev => ({
@@ -212,9 +243,10 @@ export default function TestPage({ params }) {
   };
 
   const handleSubmit = async () => {
-    if (state.submitted) return;
+    if (state.submitted || isSubmitting) return;
     
     try {
+      setIsSubmitting(true);
       const res = await fetch(`/api/tests/${testId}/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -237,11 +269,64 @@ export default function TestPage({ params }) {
         ...prev,
         error: err.message
       }));
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  if (state.loading) return <div className={styles.loading}>Loading test...</div>;
+  const handleTimeUp = () => {
+    handleSubmit();
+  };
+
+  useEffect(() => {
+    const handleKeyPress = (e) => {
+      // Handle option selection (a-z for options)
+      if (/^[a-z]$/.test(e.key)) {
+        const currentQuestion = state.questions[state.currentIndex];
+        if (currentQuestion) {
+          const optionIndex = e.key.charCodeAt(0) - 97; // 'a' = 0, 'b' = 1, etc.
+          const option = currentQuestion.options[optionIndex];
+          if (option) {
+            handleAnswerSelect(currentQuestion.id, option.id);
+          }
+        }
+      }
+
+      // Handle navigation
+      switch (e.key) {
+        case 'ArrowLeft':
+          setState(prev => ({
+            ...prev,
+            currentIndex: Math.max(0, prev.currentIndex - 1)
+          }));
+          break;
+        case 'ArrowRight':
+          setState(prev => ({
+            ...prev,
+            currentIndex: Math.min(state.questions.length - 1, prev.currentIndex + 1)
+          }));
+          break;
+        case 'Enter':
+          if (e.target.tagName !== 'BUTTON') {
+            handleSubmit();
+          }
+          break;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [state.currentIndex, state.questions, handleAnswerSelect]);
+
+  if (state.loading) return (
+    <div className={styles.loadingContainer}>
+      <div className={styles.loadingSpinner}></div>
+      <p>Loading test...</p>
+    </div>
+  );
+  
   if (state.error) return <div className={styles.error}>{state.error}</div>;
+  
   if (state.submitted) return (
     <div className={styles.submitted}>
       <h2>Test Submitted Successfully!</h2>
@@ -259,41 +344,63 @@ export default function TestPage({ params }) {
 
   return (
     <div className={styles.container}>
-      <header className={styles.header}>
-        <h1>Test: {state.testDetails?.title || 'Untitled Test'}</h1>
-        <TestTimer 
-          startTime={state.startTime}
-          durationMins={state.testDetails?.durationMins} 
-        />
-      </header>
-
-      <main className={styles.main}>
-        <div className={styles.questionContainer}>
-          <div className={styles.questionHeader}>
-            <span>Question {state.currentIndex + 1} of {totalQuestions}</span>
-          </div>
-          
-          <div className={styles.questionText}>
-            {currentQuestion.text}
-          </div>
-
-          <div className={styles.options}>
-            {currentQuestion.options.map((option, idx) => (
-              <div 
-                key={option.id}
-                className={`${styles.option} ${
-                  state.answers[currentQuestion.id] === option.id ? styles.selected : ''
-                }`}
-                onClick={() => handleAnswerSelect(currentQuestion.id, option.id)}
+      {showConfirmDialog && (
+        <div className={styles.modalOverlay}>
+          <div className={styles.modal}>
+            <h3>Confirm Submission</h3>
+            <p>Are you sure you want to submit your test? This action cannot be undone.</p>
+            <div className={styles.modalActions}>
+              <button 
+                onClick={() => setShowConfirmDialog(false)}
+                className={styles.cancelButton}
               >
-                <span className={styles.optionLabel}>
-                  {String.fromCharCode(65 + idx)}.
-                </span>
-                <span>{option.text}</span>
-              </div>
-            ))}
+                Cancel
+              </button>
+              <button 
+                onClick={() => {
+                  setShowConfirmDialog(false);
+                  handleSubmit();
+                }}
+                className={styles.confirmButton}
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? 'Submitting...' : 'Submit Test'}
+              </button>
+            </div>
           </div>
+        </div>
+      )}
 
+      <div className={styles.header}>
+        <h1>{state.testDetails?.title}</h1>
+        <TestTimer 
+          startTime={state.startTime} 
+          durationMins={state.testDetails?.durationMins}
+          onTimeUp={handleTimeUp}
+        />
+      </div>
+      
+      <div className={styles.content}>
+        <div className={styles.questionSection}>
+          {state.questions[state.currentIndex] && (
+            <div className={styles.question}>
+              <h3>Question {state.currentIndex + 1}</h3>
+              <p>{state.questions[state.currentIndex].text}</p>
+              <div className={styles.options}>
+                {state.questions[state.currentIndex].options.map(option => (
+                  <label key={option.id} className={styles.option}>
+                    <input
+                      type="radio"
+                      name={`question-${state.questions[state.currentIndex].id}`}
+                      checked={state.answers[state.questions[state.currentIndex].id] === option.id}
+                      onChange={() => handleAnswerSelect(state.questions[state.currentIndex].id, option.id)}
+                    />
+                    {option.text}
+                  </label>
+                ))}
+              </div>
+            </div>
+          )}
           <div className={styles.navigation}>
             <button 
               onClick={() => setState(prev => ({ 
@@ -301,7 +408,9 @@ export default function TestPage({ params }) {
                 currentIndex: Math.max(0, prev.currentIndex - 1) 
               }))}
               disabled={state.currentIndex === 0}
+              className={styles.navButton}
             >
+              <span className="material-icons">chevron_left</span>
               Previous
             </button>
             <button 
@@ -310,27 +419,31 @@ export default function TestPage({ params }) {
                 currentIndex: Math.min(totalQuestions - 1, prev.currentIndex + 1) 
               }))}
               disabled={state.currentIndex === totalQuestions - 1}
+              className={styles.navButton}
             >
               Next
+              <span className="material-icons">chevron_right</span>
             </button>
           </div>
         </div>
-      </main>
-
-      <footer className={styles.footer}>
+        
         <QuestionGrid
           questions={state.questions}
+          answers={state.answers}
           currentIndex={state.currentIndex}
-          answeredQuestionIds={Object.keys(state.answers)}
           onNavigate={handleQuestionNavigation}
         />
+      </div>
+
+      <div className={styles.footer}>
         <button 
-          onClick={handleSubmit}
+          onClick={() => setShowConfirmDialog(true)}
           className={styles.submitButton}
+          disabled={isSubmitting}
         >
-          Submit Test
+          {isSubmitting ? 'Submitting...' : 'Submit Test'}
         </button>
-      </footer>
+      </div>
     </div>
   );
 }

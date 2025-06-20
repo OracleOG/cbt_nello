@@ -1,16 +1,14 @@
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter, Roboto_Mono } from "next/font/google";
 import "./globals.css";
 import SessionWrapper from "@/lib/sessionWrapper";
-import { Toaster } from "react-hot-toast"; // Import Toaster
+import { Toaster } from "react-hot-toast";
 
-
-
-const geistSans = Geist({
+const geistSans = Inter({
   variable: "--font-geist-sans",
   subsets: ["latin"],
 });
 
-const geistMono = Geist_Mono({
+const geistMono = Roboto_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
@@ -23,12 +21,18 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        {/* Add Material Icons */}
+        <link 
+          href="https://fonts.googleapis.com/icon?family=Material+Icons" 
+          rel="stylesheet"
+        />
+      </head>
       <body className={`${geistSans.variable} ${geistMono.variable}`} suppressHydrationWarning>
-   
         <SessionWrapper>
           {children}
         </SessionWrapper>
-        <Toaster position="top-right" reverseOrder={false} /> {/* Add Toaster */}
+        <Toaster position="top-right" reverseOrder={false} />
       </body>
     </html>
   );
