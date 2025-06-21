@@ -4,9 +4,14 @@ import { useSession } from 'next-auth/react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faMoon, faSun, faBars, faSignOutAlt } from '@fortawesome/free-solid-svg-icons';
 import styles from './Header.module.css';
+import { signOut } from 'next-auth/react';
 
 export default function Header({ darkMode, toggleTheme, toggleSidebar }) {
   const { data: session } = useSession();
+
+  const handleLogOut = () => {
+    signOut({ callbackUrl: '/auth/login' });
+  }
 
   return (
     <header className={styles.header}>
@@ -27,6 +32,7 @@ export default function Header({ darkMode, toggleTheme, toggleSidebar }) {
         {session?.user && (
           <div className={styles.profile}>
             <span className={styles.userName}>{session.user.name}</span>
+
             <Link href="/api/auth/signout" className={styles.logoutButton}>
               <FontAwesomeIcon icon={faSignOutAlt} />
             </Link>

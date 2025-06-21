@@ -270,6 +270,33 @@ export default function TestManagement() {
                       {isExporting ? 'Exporting...' : 'Export Results'}
                     </button>
                   </td>
+                  <td className="actions">
+                    <Link 
+                      href={`/test/edit/${test.id}`}
+                      className="edit-btn"
+                    >
+                      Edit
+                    </Link>
+                    <button
+                      onClick={() => toggleTestStatus(test.id, test.status)}
+                      className={`toggle-btn ${test.status.toLowerCase()}`}
+                    >
+                      {test.status === 'ENABLED' ? 'Disable' : 'Enable'}
+                    </button>
+                    <button
+                      onClick={() => handleExportResults(test.id)}
+                      className="export-btn"
+                      disabled={isExporting}
+                    >
+                      {isExporting ? 'Exporting...' : 'Export Results'}
+                    </button>
+                    <Link
+                      href={`/test/${test.id}/attempts`}
+                      className="attempts-btn"
+                    >
+                      View Attempts
+                    </Link>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -404,6 +431,21 @@ export default function TestManagement() {
         .export-btn:disabled {
           background-color: #95a5a6;
           cursor: not-allowed;
+        }
+        .attempts-btn {
+          padding: 6px 12px;
+          background-color: #8b5cf6;
+          color: white;
+          border: none;
+          border-radius: 4px;
+          cursor: pointer;
+          margin-left: 8px;
+          text-decoration: none;
+          display: inline-block;
+        }
+
+        .attempts-btn:hover {
+          background-color: #7c3aed;
         }
       `}</style>
     </div>

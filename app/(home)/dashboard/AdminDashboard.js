@@ -35,7 +35,7 @@ export default function AdminDashboard({ tests, stats, loading }) {
   
         <div className="tests-list">
           <h2>Enabled Tests</h2>
-          <table>
+          <table className="table1">
             <thead>
               <tr>
                 <th>Test Title</th>

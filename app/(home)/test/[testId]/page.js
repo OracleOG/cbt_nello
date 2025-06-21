@@ -1,4 +1,5 @@
 'use client';
+
 import { useEffect, useState, useRef, use } from 'react';
 import { redirect, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
@@ -307,10 +308,9 @@ export default function TestPage({ params }) {
           }));
           break;
         case 'Enter':
-          if (e.target.tagName !== 'BUTTON') {
-            handleSubmit();
-          }
+          setShowConfirmDialog(true);
           break;
+      
       }
     };
 

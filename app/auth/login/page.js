@@ -83,7 +83,7 @@ export default function LoginPage() {
             <a href="/forgot-password">Forgot Password?</a>
           </p>
           <p>
-            Don't have an account? <a href="/register">Sign Up</a>
+            Dont have an account? <a href="/register">Sign Up</a>
           </p>
         </div>
       </div>
