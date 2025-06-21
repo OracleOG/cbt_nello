@@ -10,24 +10,39 @@ export async function PUT(request, { params }) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { testId } = params;
     const { attemptId, answers, timeRemaining } = await request.json();
     
-    if (!attemptId) {
+    if (!testId || isNaN(Number(testId))) {
       return NextResponse.json(
-        { error: "Missing attempt ID" },
+        { error: "Invalid test ID" },
+        { status: 400 }
+      );
+    }
+
+    if (!attemptId || isNaN(Number(attemptId))) {
+      return NextResponse.json(
+        { error: "Missing or invalid attempt ID" },
+        { status: 400 }
+      );
+    }
+
+    if (timeRemaining !== undefined && (isNaN(Number(timeRemaining)) || Number(timeRemaining) < 0)) {
+      return NextResponse.json(
+        { error: "Invalid time remaining value" },
         { status: 400 }
       );
     }
 
     const updated = await prisma.testTaker.update({
       where: {
-        id: attemptId,
+        id: Number(attemptId),
         userId: session.user.id,
         completedAt: null
       },
       data: {
         answers: answers || {},
-        timeRemaining: timeRemaining || 0
+        timeRemaining: timeRemaining !== undefined ? Number(timeRemaining) : 0
       }
     });
 

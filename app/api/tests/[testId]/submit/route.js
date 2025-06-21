@@ -6,20 +6,33 @@ import prisma from "@/lib/prisma";
 export async function POST(request, { params }) {
   try {
     const session = await getSession(request);
-        if (!session?.user) {
-          return NextResponse.json(
-            { error: "Unauthorized" }, 
-            { status: 401 }
-          );
-        }
+    if (!session?.user) {
+      return NextResponse.json(
+        { error: "Unauthorized" }, 
+        { status: 401 }
+      );
+    }
 
     const { testId } = await params;
-
     const { attemptId, answers } = await request.json();
     
-    if (!attemptId || !answers) {
+    if (!testId || isNaN(Number(testId))) {
       return NextResponse.json(
-        { error: "Missing required fields" },
+        { error: "Invalid test ID" },
+        { status: 400 }
+      );
+    }
+
+    if (!attemptId || isNaN(Number(attemptId))) {
+      return NextResponse.json(
+        { error: "Missing or invalid attempt ID" },
+        { status: 400 }
+      );
+    }
+
+    if (!answers || typeof answers !== 'object') {
+      return NextResponse.json(
+        { error: "Answers must be provided as an object" },
         { status: 400 }
       );
     }
@@ -51,7 +64,7 @@ export async function POST(request, { params }) {
     // Update test attempt
     await prisma.$transaction([
       prisma.testTaker.update({
-        where: { id: attemptId },
+        where: { id: Number(attemptId) },
         data: {
           score,
           completedAt: new Date(),
@@ -63,7 +76,7 @@ export async function POST(request, { params }) {
           data: {
             question: { connect: { id: answer.questionId } },
             option: { connect: { id: answer.optionId } },
-            testTaker: { connect: { id: attemptId } },
+            testTaker: { connect: { id: Number(attemptId) } },
             user: { connect: { id: session.user.id } },
             isCorrect: answer.isCorrect
           }

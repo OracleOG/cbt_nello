@@ -3,28 +3,53 @@ import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
 export async function POST(request) {
-    const { users } = await request.json();
+    try {
+        const { users } = await request.json();
 
-    const studentRole = await prisma.role.findFirst({
-        where: { name: 'student' },
-    })
+        if (!Array.isArray(users) || users.length === 0) {
+            return NextResponse.json(
+                { error: "Users array is required and must not be empty" },
+                { status: 400 }
+            );
+        }
 
-    const adminRole = await prisma.role.findFirst({
-        where: { name: 'admin' },
-    })
+        const studentRole = await prisma.role.findFirst({
+            where: { name: 'student' },
+        });
 
-    const hashedUsers = await Promise.all(
-        users.map(async (user) => ({
-            ...user,
-            password: await bcrypt.hash(user.password, 10),
-            roleId: user.role === 'admin' ? adminRole.id : studentRole.id,
-        }))
-    )
+        const adminRole = await prisma.role.findFirst({
+            where: { name: 'admin' },
+        });
 
-    const createdUsers = await prisma.user.createMany({
-        data: hashedUsers,
-    });
+        if (!studentRole || !adminRole) {
+            return NextResponse.json(
+                { error: "Required roles not found in database" },
+                { status: 500 }
+            );
+        }
 
-    return NextResponse.json({ message: "Users created successfully", createdUsers }); 
+        const hashedUsers = await Promise.all(
+            users.map(async (user) => ({
+                ...user,
+                password: await bcrypt.hash(user.password, 10),
+                roleId: user.role === 'admin' ? adminRole.id : studentRole.id,
+            }))
+        );
+
+        const createdUsers = await prisma.user.createMany({
+            data: hashedUsers,
+        });
+
+        return NextResponse.json({ 
+            message: "Users created successfully", 
+            createdUsers 
+        });
+    } catch (error) {
+        console.error("Bulk upload error:", error);
+        return NextResponse.json(
+            { error: "Failed to create users" },
+            { status: 500 }
+        );
+    }
 }
 

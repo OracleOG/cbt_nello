@@ -32,11 +32,10 @@ export async function GET(request) {
 
     return NextResponse.json(tests);
   } catch (error) {
-    console.log(error.message)
+    console.error('Tests fetch error:', error);
     return NextResponse.json(
       { error: `Failed to fetch tests: ${error.message}`, details: error.message }, 
       { status: 500 }
-      
     );
   }
 }

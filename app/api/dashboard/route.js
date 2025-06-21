@@ -1,17 +1,15 @@
+import { NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
 
 export async function GET(request) {
-  const session = await getSession(request);
-  
-  if (!session) {
-    return new Response(JSON.stringify({ error: 'Unauthorized' }), {
-      status: 401,
-      headers: { 'Content-Type': 'application/json' }
-    });
-  }
-
   try {
+    const session = await getSession(request);
+    
+    if (!session) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     if (session.user.role === 'ADMIN') {
       const [tests, stats] = await Promise.all([
         prisma.test.findMany({
@@ -30,20 +28,15 @@ export async function GET(request) {
         `
       ]);
 
-      return new Response(JSON.stringify({ tests, stats: stats[0] }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return NextResponse.json({ tests, stats: stats[0] });
     }
 
-    return new Response(JSON.stringify({ error: 'Forbidden' }), {
-      status: 403,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   } catch (error) {
-    return new Response(JSON.stringify({ error: 'Failed to load dashboard data' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    console.error('Dashboard error:', error);
+    return NextResponse.json(
+      { error: 'Failed to load dashboard data' },
+      { status: 500 }
+    );
   }
 }
