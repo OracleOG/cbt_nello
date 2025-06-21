@@ -1,0 +1,3 @@
+DATABASE_URL="postgresql://neondb_owner:npg_PpkrcHlO53JK@ep-bitter-rain-a8e9m4eh-pooler.eastus2.azure.neon.tech/neondb?sslmode=require"
+NEXTAUTH_URL=https://cbt-nello.vercel.app
+NEXTAUTH_SECRET=iOYkm3rh802ZhadJF8Up5crjofYiQd3qfD55nVsNLng=
