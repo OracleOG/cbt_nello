@@ -1,7 +1,6 @@
 // app/api/tests/[testId]/route.js
 import { NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
-import prisma from '@/lib/prisma';
 
 export async function GET(request, { params }) {
   try {
@@ -19,6 +18,9 @@ export async function GET(request, { params }) {
         { status: 400 }
       );
     }
+
+    // Lazy load prisma to avoid build-time connections
+    const { default: prisma } = await import('@/lib/prisma');
 
     const test = await prisma.test.findUnique({
       where: { 

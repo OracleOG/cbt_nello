@@ -1,7 +1,6 @@
 // app/api/create-bulk-test/route.js
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import prisma from "@/lib/prisma";
 
 export async function POST(request) {
   try {
@@ -43,6 +42,9 @@ export async function POST(request) {
     }
     
     const userId = session.user.id;
+    
+    // Lazy load prisma to avoid build-time connections
+    const { default: prisma } = await import("@/lib/prisma");
     
     const existingUser = await prisma.user.findUnique({
       where: { id: userId }

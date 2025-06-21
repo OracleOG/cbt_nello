@@ -1,6 +1,5 @@
 // app/api/tests/route.js
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
 
 export async function GET(request) {
   try {
@@ -14,6 +13,9 @@ export async function GET(request) {
         { status: 400 }
       );
     }
+
+    // Lazy load prisma to avoid build-time connections
+    const { default: prisma } = await import('@/lib/prisma');
 
     const tests = await prisma.test.findMany({
       where: {

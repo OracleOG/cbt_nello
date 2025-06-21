@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
 
 export async function GET(request) {
@@ -11,6 +10,9 @@ export async function GET(request) {
     }
 
     if (session.user.role === 'ADMIN') {
+      // Lazy load prisma to avoid build-time connections
+      const { default: prisma } = await import('@/lib/prisma');
+
       const [tests, stats] = await Promise.all([
         prisma.test.findMany({
           include: {

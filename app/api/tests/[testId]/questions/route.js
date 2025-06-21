@@ -1,7 +1,6 @@
 // app/api/tests/[testId]/questions/route.js
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import prisma from "@/lib/prisma";
 import { shuffleWithSeed } from "@/lib/shuffle";
 
 export async function GET(request, { params }) {
@@ -23,6 +22,9 @@ export async function GET(request, { params }) {
         { status: 400 }
       );
     }
+
+    // Lazy load prisma to avoid build-time connections
+    const { default: prisma } = await import("@/lib/prisma");
 
     // Fetch test with questions and their options
     const test = await prisma.test.findUnique({

@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
 import { getSession } from '@/lib/auth';
 
 export async function GET(request) {
@@ -9,6 +8,9 @@ export async function GET(request) {
     if (!session) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+
+    // Lazy load prisma to avoid build-time connections
+    const { default: prisma } = await import('@/lib/prisma');
 
     const tests = await prisma.test.findMany({
       where: { status: 'ENABLED' },

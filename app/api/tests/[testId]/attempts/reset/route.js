@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
 import { getSession } from "@/lib/auth";
 
 export async function POST(request, { params }) {
@@ -25,6 +24,9 @@ export async function POST(request, { params }) {
         { status: 400 }
       );
     }
+
+    // Lazy load prisma to avoid build-time connections
+    const { default: prisma } = await import('@/lib/prisma');
 
     // Delete all answers first
     await prisma.answer.deleteMany({

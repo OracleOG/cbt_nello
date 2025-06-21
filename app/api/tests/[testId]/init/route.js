@@ -1,7 +1,6 @@
 // app/api/tests/[testId]/init/route.js
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import prisma from "@/lib/prisma";
 
 export async function POST(request, { params }) {
   try {
@@ -16,6 +15,9 @@ export async function POST(request, { params }) {
         { status: 400 }
       );
     }
+
+    // Lazy load prisma to avoid build-time connections
+    const { default: prisma } = await import("@/lib/prisma");
 
     // Check for an existing attempt
     const existingAttempt = await prisma.testTaker.findFirst({

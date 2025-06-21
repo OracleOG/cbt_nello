@@ -1,6 +1,5 @@
 // app/api/semesters/route.js
 import { NextResponse } from 'next/server'
-import prisma from '@/lib/prisma'
 
 export async function GET(request) {
   try {
@@ -10,6 +9,9 @@ export async function GET(request) {
     const where = sessionId
       ? { where: { sessionId: Number(sessionId) } }
       : {}
+
+    // Lazy load prisma to avoid build-time connections
+    const { default: prisma } = await import('@/lib/prisma');
 
     const semesters = await prisma.semester.findMany({
       select: { id: true, code: true, name: true, sessionId: true },

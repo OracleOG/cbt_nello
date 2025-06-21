@@ -1,7 +1,6 @@
 // app/api/tests/[testId]/submit/route.js
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import prisma from "@/lib/prisma";
 
 export async function POST(request, { params }) {
   try {
@@ -36,6 +35,9 @@ export async function POST(request, { params }) {
         { status: 400 }
       );
     }
+
+    // Lazy load prisma to avoid build-time connections
+    const { default: prisma } = await import("@/lib/prisma");
 
     // Calculate score (example - modify based on your logic)
     const questions = await prisma.question.findMany({
