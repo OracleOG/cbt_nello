@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import prisma from '@/lib/prisma';
 import Papa from 'papaparse';
 import { getSession } from "@/lib/auth";
 
@@ -17,6 +16,8 @@ export async function GET(request, { params }) {
       return NextResponse.json({ error: 'Invalid test ID' }, { status: 400 });
     }
 
+    // Lazy load prisma to avoid build-time connections
+    const { default: prisma } = await import('@/lib/prisma');
 
     // Get test details
     const test = await prisma.test.findUnique({

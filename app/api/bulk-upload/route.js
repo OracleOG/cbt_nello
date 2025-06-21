@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import bcrypt from "bcryptjs";
 
 export async function POST(request) {
     try {
@@ -12,8 +11,9 @@ export async function POST(request) {
             );
         }
 
-        // Lazy load prisma to avoid build-time connections
+        // Lazy load prisma and bcrypt to avoid build-time connections
         const { default: prisma } = await import("@/lib/prisma");
+        const bcrypt = await import("bcryptjs");
 
         const studentRole = await prisma.role.findFirst({
             where: { name: 'student' },

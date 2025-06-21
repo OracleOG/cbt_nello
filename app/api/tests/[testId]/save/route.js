@@ -1,7 +1,6 @@
 // app/api/tests/[testId]/save/route.js
 import { NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import prisma from "@/lib/prisma";
 
 export async function PUT(request, { params }) {
   try {
@@ -33,6 +32,9 @@ export async function PUT(request, { params }) {
         { status: 400 }
       );
     }
+
+    // Lazy load prisma to avoid build-time connections
+    const { default: prisma } = await import("@/lib/prisma");
 
     const updated = await prisma.testTaker.update({
       where: {
