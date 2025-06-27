@@ -1,7 +1,7 @@
 'use client';
 
-import { useEffect, useState, useRef, use } from 'react';
-import { redirect, useRouter } from 'next/navigation';
+import { useEffect, useState, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import TestTimer from './TestTimer';
 import QuestionGrid from './QuestionGrid';
@@ -28,48 +28,6 @@ export default function TestPage({ params }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
-  const loadQuestions = async () => {
-    try {
-      const questionsRes = await fetch(`/api/tests/${testId}/questions`);
-      
-      if (!questionsRes.ok) {
-        const errorData = await questionsRes.json().catch(() => ({}));
-        throw new Error(errorData.error || 'Failed to load questions');
-      }
-
-      const { questions } = await questionsRes.json();
-      return questions;
-    } catch (err) {
-      setState(prev => ({
-        ...prev,
-        error: err.message,
-        loading: false
-      }));
-      return [];
-    }
-  };
-
-  const calculateElapsedTime = (startTime) => {
-    return Math.floor((Date.now() - new Date(startTime).getTime()) / 1000);
-  };
-  
-  const syncTimeFromServer = async () => {
-    try {
-      const res = await fetch(`/api/tests/${testId}/resume-test`);
-      if (res.ok) {
-        const { startedAt } = await res.json();
-        setState(prev => ({ ...prev, startTime: startedAt }));
-      }
-    } catch (err) {
-      console.error('Server sync failed');
-      const savedState = localStorage.getItem(`test-${testId}-${session.user.id}`);
-      if (savedState) {
-        const { startTime } = JSON.parse(savedState);
-        setState(prev => ({ ...prev, startTime }));
-      }
-    }
-  };
-  
   const debouncedSaveToLocalStorage = () => {
     clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
@@ -83,57 +41,73 @@ export default function TestPage({ params }) {
       localStorage.setItem(`test-${testId}-${session.user.id}`, JSON.stringify(saveData));
     }, 1000);
   };
+
+  const saveToLocalStorageImmediately = (newIndex = null) => {
+    const saveData = {
+      answers: state.answers,
+      startTime: state.startTime,
+      attemptId: state.attemptId,
+      currentIndex: newIndex !== null ? newIndex : state.currentIndex,
+      timestamp: Date.now()
+    };
+    localStorage.setItem(`test-${testId}-${session.user.id}`, JSON.stringify(saveData));
+  };
   
   useEffect(() => {
     if (!session) return;
 
     const initializeExam = async () => {
       try {
-        // Try loading saved exam state from localStorage
+        // Load saved state from localStorage first
         const savedStateRaw = localStorage.getItem(`test-${testId}-${session.user.id}`);
         const savedState = savedStateRaw ? JSON.parse(savedStateRaw) : null;
+        
+        // Check if saved state is recent (within 24 hours)
+        const isRecentState = savedState && (Date.now() - savedState.timestamp) < 24 * 60 * 60 * 1000;
 
-        // Fetch the latest exam data in parallel
-        const [initRes, questionsRes, testRes] = await Promise.all([
-          fetch(`/api/tests/${testId}/init`, { method: 'POST' }),
+        // Fetch exam data from server
+        const [attemptRes, questionsRes, testRes] = await Promise.all([
+          fetch(`/api/tests/${testId}/attempts`, { method: 'POST' }),
           fetch(`/api/tests/${testId}/questions`),
           fetch(`/api/tests/${testId}`)
         ]);
 
-        const [initData, questionsData, testData] = await Promise.all([
-          initRes.json(),
+        const [attemptData, questionsData, testData] = await Promise.all([
+          attemptRes.json(),
           questionsRes.json(),
           testRes.json()
         ]);
 
-        if (initData.error) throw new Error(initData.error);
+        if (attemptData.error) throw new Error(attemptData.error);
         if (questionsData.error) throw new Error(questionsData.error);
         if (testData.error) throw new Error(testData.error);
 
-        // Merge saved values (if present and recent) with server data.
-        // If we have a valid saved state, use its startTime, answers, attemptId and currentIndex.
-        const newStartTime =
-          savedState && Date.now() - savedState.timestamp < 300000
-            ? savedState.startTime
-            : initData.startedAt || new Date().toISOString();
+        // Get server-side saved answers from the attempt data
+        const serverAnswers = attemptData.answers || {};
+        const serverStartTime = attemptData.startedAt;
+        const serverAttemptId = attemptData.attemptId;
 
-        const newAttemptId =
-          savedState && Date.now() - savedState.timestamp < 300000
-            ? savedState.attemptId
-            : initData.attemptId;
-
-        const newAnswers =
-          savedState && Date.now() - savedState.timestamp < 300000
-            ? savedState.answers
-            : {};
-
-        const newCurrentIndex =
-          savedState && Date.now() - savedState.timestamp < 300000
-            ? savedState.currentIndex
-            : 0;
+        // Determine which data to use based on priority:
+        // 1. Recent localStorage data (most recent user interaction)
+        // 2. Server-side data (persisted answers)
+        // 3. Fresh start (new attempt)
+        
+        const newStartTime = isRecentState 
+          ? savedState.startTime 
+          : (serverStartTime || new Date().toISOString());
+        
+        const newAttemptId = isRecentState 
+          ? savedState.attemptId 
+          : serverAttemptId;
+        
+        // Merge answers: localStorage takes precedence if recent, otherwise use server data
+        const newAnswers = isRecentState 
+          ? { ...serverAnswers, ...savedState.answers } // Server data as base, localStorage overrides
+          : serverAnswers;
+        
+        const newCurrentIndex = isRecentState ? savedState.currentIndex : 0;
 
         const newState = {
-          ...initData,
           questions: questionsData.questions || [],
           testDetails: testData.test,
           startTime: newStartTime,
@@ -145,7 +119,7 @@ export default function TestPage({ params }) {
 
         setState(newState);
 
-        // Persist all relevant state to localStorage, including questions if desired.
+        // Update localStorage with merged state
         localStorage.setItem(
           `test-${testId}-${session.user.id}`,
           JSON.stringify({
@@ -153,9 +127,7 @@ export default function TestPage({ params }) {
             startTime: newState.startTime,
             attemptId: newState.attemptId,
             currentIndex: newState.currentIndex,
-            timestamp: Date.now(),
-            // Optionally also store questions if they rarely change:
-            questions: newState.questions 
+            timestamp: Date.now()
           })
         );
       } catch (err) {
@@ -191,14 +163,13 @@ export default function TestPage({ params }) {
 
   useEffect(() => {
     const saveProgress = async () => {
-      if (Object.keys(state.answers).length === 0) return;
+      if (Object.keys(state.answers).length === 0 || !state.attemptId) return;
       
       try {
-        await fetch(`/api/tests/${testId}/save`, {
+        await fetch(`/api/tests/${testId}/attempts/${state.attemptId}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            attemptId: state.attemptId,
             answers: state.answers,
             timeRemaining: state.timeRemaining
           })
@@ -241,6 +212,8 @@ export default function TestPage({ params }) {
 
   const handleQuestionNavigation = (index) => {
     setState(prev => ({ ...prev, currentIndex: index }));
+    // Save current index immediately when navigating
+    saveToLocalStorageImmediately(index);
   };
 
   const handleSubmit = async () => {
@@ -248,11 +221,10 @@ export default function TestPage({ params }) {
     
     try {
       setIsSubmitting(true);
-      const res = await fetch(`/api/tests/${testId}/submit`, {
+      const res = await fetch(`/api/tests/${testId}/attempts/${state.attemptId}/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          attemptId: state.attemptId,
           answers: state.answers
         })
       });
@@ -296,27 +268,28 @@ export default function TestPage({ params }) {
       // Handle navigation
       switch (e.key) {
         case 'ArrowLeft':
-          setState(prev => ({
-            ...prev,
-            currentIndex: Math.max(0, prev.currentIndex - 1)
-          }));
+          setState(prev => {
+            const newIndex = Math.max(0, prev.currentIndex - 1);
+            saveToLocalStorageImmediately(newIndex);
+            return { ...prev, currentIndex: newIndex };
+          });
           break;
         case 'ArrowRight':
-          setState(prev => ({
-            ...prev,
-            currentIndex: Math.min(state.questions.length - 1, prev.currentIndex + 1)
-          }));
+          setState(prev => {
+            const newIndex = Math.min(state.questions.length - 1, prev.currentIndex + 1);
+            saveToLocalStorageImmediately(newIndex);
+            return { ...prev, currentIndex: newIndex };
+          });
           break;
         case 'Enter':
           setShowConfirmDialog(true);
           break;
-      
       }
     };
 
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [state.currentIndex, state.questions, handleAnswerSelect]);
+  }, [state.currentIndex, state.questions, state.answers, state.startTime, state.attemptId, testId, session?.user?.id]);
 
   if (state.loading) return (
     <div className={styles.loadingContainer}>
@@ -403,10 +376,13 @@ export default function TestPage({ params }) {
           )}
           <div className={styles.navigation}>
             <button 
-              onClick={() => setState(prev => ({ 
-                ...prev, 
-                currentIndex: Math.max(0, prev.currentIndex - 1) 
-              }))}
+              onClick={() => {
+                setState(prev => {
+                  const newIndex = Math.max(0, prev.currentIndex - 1);
+                  saveToLocalStorageImmediately(newIndex);
+                  return { ...prev, currentIndex: newIndex };
+                });
+              }}
               disabled={state.currentIndex === 0}
               className={styles.navButton}
             >
@@ -414,10 +390,13 @@ export default function TestPage({ params }) {
               Previous
             </button>
             <button 
-              onClick={() => setState(prev => ({ 
-                ...prev, 
-                currentIndex: Math.min(totalQuestions - 1, prev.currentIndex + 1) 
-              }))}
+              onClick={() => {
+                setState(prev => {
+                  const newIndex = Math.min(totalQuestions - 1, prev.currentIndex + 1);
+                  saveToLocalStorageImmediately(newIndex);
+                  return { ...prev, currentIndex: newIndex };
+                });
+              }}
               disabled={state.currentIndex === totalQuestions - 1}
               className={styles.navButton}
             >

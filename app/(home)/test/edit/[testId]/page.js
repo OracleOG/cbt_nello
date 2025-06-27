@@ -42,27 +42,37 @@ export default function EditTest() {
         if (!testRes.ok || !questionsRes.ok) {
           throw new Error('Failed to fetch test data');
         }
+        
+        const testData = await testRes.json();
         const questionsData = await questionsRes.json();
+        
         if (!questionsData.questions || !questionsData.questions.length) {
           throw new Error('No questions available for this test');
         }
+        
+        console.log('testData', testData);
         console.log('questionsData', questionsData);
-        setTest(await testRes.json());
+        
+        setTest(testData.test); // Access the test object from the response
         setQuestions(questionsData.questions);
         
       } catch (err) {
         setError(err.message);
       } finally {
         setLoading(false);
-        console.log('set_questions', questions)
       }
     }
-    fetchTest();
-  }, [testId]);
+    
+    if (!isLoadingSession && session?.user?.role === 'admin') {
+      fetchTest();
+    }
+  }, [testId, isLoadingSession, session]);
 
   const handleSave = async () => {
     try {
       setSaving(true);
+      setError('');
+      
       const res = await fetch(`/api/tests/${testId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -73,8 +83,15 @@ export default function EditTest() {
         })
       });
       
-      if (!res.ok) throw new Error('Failed to save test');
-      router.push('/test?success=true');
+      const result = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(result.error || 'Failed to save test');
+      }
+      
+      // Show success message
+      alert('Test updated successfully!');
+      router.push('/dashboard');
     } catch (err) {
       setError(err.message);
     } finally {

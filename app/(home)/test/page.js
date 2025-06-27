@@ -269,27 +269,6 @@ export default function TestManagement() {
                     >
                       {isExporting ? 'Exporting...' : 'Export Results'}
                     </button>
-                  </td>
-                  <td className="actions">
-                    <Link 
-                      href={`/test/edit/${test.id}`}
-                      className="edit-btn"
-                    >
-                      Edit
-                    </Link>
-                    <button
-                      onClick={() => toggleTestStatus(test.id, test.status)}
-                      className={`toggle-btn ${test.status.toLowerCase()}`}
-                    >
-                      {test.status === 'ENABLED' ? 'Disable' : 'Enable'}
-                    </button>
-                    <button
-                      onClick={() => handleExportResults(test.id)}
-                      className="export-btn"
-                      disabled={isExporting}
-                    >
-                      {isExporting ? 'Exporting...' : 'Export Results'}
-                    </button>
                     <Link
                       href={`/test/${test.id}/attempts`}
                       className="attempts-btn"
@@ -343,6 +322,10 @@ export default function TestManagement() {
           overflow: hidden;
           box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
+        :global(body.dark) .test-list {
+          background: #18181b;
+          color: #f3f4f6;
+        }
         
         table {
           width: 100%;
@@ -354,10 +337,17 @@ export default function TestManagement() {
           text-align: left;
           border-bottom: 1px solid #eee;
         }
+        :global(body.dark) th, :global(body.dark) td {
+          color: #f3f4f6;
+          border-bottom: 1px solid #27272a;
+        }
         
         th {
           background: #f9f9f9;
           font-weight: 600;
+        }
+        :global(body.dark) th {
+          background: #23232a;
         }
         
         .status {
@@ -372,10 +362,18 @@ export default function TestManagement() {
           background: #e6f7ee;
           color: #10b981;
         }
+        :global(body.dark) .status.enabled {
+          background: #134e3a;
+          color: #6ee7b7;
+        }
         
         .status.disabled {
           background: #fff1f1;
           color: #ef4444;
+        }
+        :global(body.dark) .status.disabled {
+          background: #3f1d1d;
+          color: #fca5a5;
         }
         
         .actions {
@@ -396,21 +394,36 @@ export default function TestManagement() {
           color: white;
           text-decoration: none;
         }
+        :global(body.dark) .edit-btn {
+          background: #2563eb;
+          color: #e0e7ef;
+        }
         
         .toggle-btn.enabled {
           background: #ef4444;
           color: white;
+        }
+        :global(body.dark) .toggle-btn.enabled {
+          background: #991b1b;
+          color: #fee2e2;
         }
         
         .toggle-btn.disabled {
           background: #10b981;
           color: white;
         }
+        :global(body.dark) .toggle-btn.disabled {
+          background: #065f46;
+          color: #bbf7d0;
+        }
         
         .loading, .empty-state {
           padding: 20px;
           text-align: center;
           color: #666;
+        }
+        :global(body.dark) .loading, :global(body.dark) .empty-state {
+          color: #d1d5db;
         }
         
         .export-btn {
@@ -422,6 +435,10 @@ export default function TestManagement() {
           cursor: pointer;
           margin-left: 8px;
           transition: background-color 0.2s;
+        }
+        :global(body.dark) .export-btn {
+          background-color: #166534;
+          color: #e0e7ef;
         }
 
         .export-btn:hover {
@@ -442,6 +459,10 @@ export default function TestManagement() {
           margin-left: 8px;
           text-decoration: none;
           display: inline-block;
+        }
+        :global(body.dark) .attempts-btn {
+          background-color: #6d28d9;
+          color: #e0e7ef;
         }
 
         .attempts-btn:hover {
