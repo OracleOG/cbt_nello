@@ -100,12 +100,12 @@ export default function TestAttemptsPage() {
             <table>
               <thead>
                 <tr>
-                  <th>Student</th>
-                  <th>Status</th>
-                  <th>Started</th>
-                  <th>Completed</th>
-                  <th>Score</th>
-                  <th>Actions</th>
+                  <th className="student-column">Student</th>
+                  <th className="status-column">Status</th>
+                  <th className="date-column">Started</th>
+                  <th className="date-column">Completed</th>
+                  <th className="score-column">Score</th>
+                  <th className="actions-column">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -114,20 +114,37 @@ export default function TestAttemptsPage() {
                     key={attempt.id} 
                     className={selectedUser?.id === attempt.user.id ? 'selected' : ''}
                   >
-                    <td>
-                      {attempt.user.firstName} {attempt.user.lastName}
-                      <br />
-                      <small>{attempt.user.email}</small>
+                    <td className="student-column">
+                      <div className="student-info">
+                        <span className="student-name">
+                          {attempt.user.firstName} {attempt.user.lastName}
+                        </span>
+                        <span className="student-email">{attempt.user.email}</span>
+                      </div>
                     </td>
-                    <td>
+                    <td className="status-column">
                       <span className={`status ${attempt.completedAt ? 'completed' : 'in-progress'}`}>
                         {attempt.completedAt ? 'Completed' : 'In Progress'}
                       </span>
                     </td>
-                    <td>{new Date(attempt.startedAt).toLocaleString()}</td>
-                    <td>{attempt.completedAt ? new Date(attempt.completedAt).toLocaleString() : '-'}</td>
-                    <td>{attempt.score ? `${attempt.score}%` : '-'}</td>
-                    <td>
+                    <td className="date-column">
+                      {new Date(attempt.startedAt).toLocaleDateString()}
+                      <br />
+                      {new Date(attempt.startedAt).toLocaleTimeString()}
+                    </td>
+                    <td className="date-column">
+                      {attempt.completedAt ? (
+                        <>
+                          {new Date(attempt.completedAt).toLocaleDateString()}
+                          <br />
+                          {new Date(attempt.completedAt).toLocaleTimeString()}
+                        </>
+                      ) : '-'}
+                    </td>
+                    <td className="score-column">
+                      {attempt.score ? `${attempt.score}%` : '-'}
+                    </td>
+                    <td className="actions-column">
                       <button
                         onClick={() => setSelectedUser(attempt.user)}
                         disabled={isResetting}
@@ -150,20 +167,22 @@ export default function TestAttemptsPage() {
           <p className="warning-text">
             Warning: This will permanently delete all records of this user's attempt.
           </p>
-          <button
-            onClick={handleResetAttempt}
-            disabled={isResetting}
-            className="reset-btn"
-          >
-            {isResetting ? 'Processing...' : 'Confirm Reset'}
-          </button>
-          <button
-            onClick={() => setSelectedUser(null)}
-            disabled={isResetting}
-            className="cancel-btn"
-          >
-            Cancel
-          </button>
+          <div className="reset-buttons">
+            <button
+              onClick={handleResetAttempt}
+              disabled={isResetting}
+              className="reset-btn"
+            >
+              {isResetting ? 'Processing...' : 'Confirm Reset'}
+            </button>
+            <button
+              onClick={() => setSelectedUser(null)}
+              disabled={isResetting}
+              className="cancel-btn"
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       )}
 
@@ -171,14 +190,25 @@ export default function TestAttemptsPage() {
         .container {
           max-width: 1200px;
           margin: 0 auto;
-          padding: 2rem;
+          padding: 1rem;
         }
         
         .header {
           display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-bottom: 2rem;
+          flex-direction: column;
+          gap: 1rem;
+          margin-bottom: 1.5rem;
+        }
+        
+        .header h1 {
+          font-size: 1.5rem;
+          margin: 0;
+        }
+        
+        .back-link {
+          color: #3b82f6;
+          text-decoration: none;
+          font-size: 0.9rem;
         }
         
         .loading {
@@ -192,30 +222,40 @@ export default function TestAttemptsPage() {
           padding: 1rem;
           border-radius: 0.5rem;
           margin-bottom: 1rem;
+          font-size: 0.9rem;
         }
         
         .attempts-list {
           background: white;
           border-radius: 0.5rem;
-          padding: 1.5rem;
+          padding: 1rem;
           box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-          margin-bottom: 2rem;
+          margin-bottom: 1.5rem;
+        }
+        
+        .attempts-list h2 {
+          font-size: 1.2rem;
+          margin-top: 0;
+          margin-bottom: 1rem;
         }
         
         .table-container {
           overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
         }
         
         table {
           width: 100%;
           border-collapse: collapse;
           margin-top: 1rem;
+          min-width: 600px;
         }
         
         th, td {
-          padding: 0.75rem 1rem;
+          padding: 0.5rem;
           text-align: left;
           border-bottom: 1px solid #e5e7eb;
+          font-size: 0.85rem;
         }
         
         th {
@@ -224,15 +264,25 @@ export default function TestAttemptsPage() {
           color: #374151;
         }
         
-        tr.selected {
-          background-color: #eff6ff;
+        .student-info {
+          display: flex;
+          flex-direction: column;
+        }
+        
+        .student-name {
+          font-weight: 500;
+        }
+        
+        .student-email {
+          font-size: 0.75rem;
+          color: #6b7280;
         }
         
         .status {
           display: inline-block;
-          padding: 0.25rem 0.5rem;
+          padding: 0.2rem 0.4rem;
           border-radius: 0.25rem;
-          font-size: 0.75rem;
+          font-size: 0.7rem;
           font-weight: 600;
           text-transform: uppercase;
         }
@@ -248,73 +298,122 @@ export default function TestAttemptsPage() {
         }
         
         .select-btn {
-          padding: 0.5rem 1rem;
+          padding: 0.4rem 0.8rem;
           background: #3b82f6;
           color: white;
           border: none;
           border-radius: 0.25rem;
           cursor: pointer;
           transition: background 0.2s;
-        }
-        
-        .select-btn:hover {
-          background: #2563eb;
-        }
-        
-        .select-btn.selected {
-          background: #1d4ed8;
-        }
-        
-        .select-btn:disabled {
-          background: #d1d5db;
-          cursor: not-allowed;
+          font-size: 0.8rem;
+          white-space: nowrap;
         }
         
         .reset-section {
           background: #fff1f2;
           border: 1px solid #ffe4e6;
           border-radius: 0.5rem;
-          padding: 1.5rem;
-          margin-top: 2rem;
+          padding: 1rem;
+          margin-top: 1.5rem;
+        }
+        
+        .reset-section h3 {
+          font-size: 1.1rem;
+          margin-top: 0;
         }
         
         .warning-text {
           color: #b91c1c;
-          margin: 1rem 0;
+          margin: 0.5rem 0;
+          font-size: 0.9rem;
+        }
+        
+        .reset-buttons {
+          display: flex;
+          gap: 0.5rem;
+          margin-top: 1rem;
+        }
+        
+        .reset-btn, .cancel-btn {
+          padding: 0.5rem 1rem;
+          font-size: 0.9rem;
+          border: none;
+          border-radius: 0.25rem;
+          cursor: pointer;
         }
         
         .reset-btn {
-          padding: 0.75rem 1.5rem;
           background: #ef4444;
           color: white;
-          border: none;
-          border-radius: 0.25rem;
-          cursor: pointer;
-          margin-right: 1rem;
-          transition: background 0.2s;
-        }
-        
-        .reset-btn:hover {
-          background: #dc2626;
-        }
-        
-        .reset-btn:disabled {
-          background: #d1d5db;
-          cursor: not-allowed;
         }
         
         .cancel-btn {
-          padding: 0.75rem 1.5rem;
           background: #e5e7eb;
-          color: #4b5563;
-          border: none;
-          border-radius: 0.25rem;
-          cursor: pointer;
-          transition: background 0.2s;
+          color: #4b7280;
         }
         
-        .cancel-btn:hover {
-          background: #d1d5db;
+        @media (max-width: 768px) {
+          .container {
+            padding: 0.5rem;
+          }
+          
+          .header {
+            margin-bottom: 1rem;
+          }
+          
+          .attempts-list {
+            padding: 0.75rem;
+          }
+          
+          th, td {
+            padding: 0.4rem;
+            font-size: 0.8rem;
+          }
+          
+          .student-info {
+            min-width: 120px;
+          }
+          
+          .date-column {
+            min-width: 80px;
+          }
+          
+          .reset-section {
+            padding: 0.75rem;
+          }
+        }
+        
+        @media (max-width: 480px) {
+          .header h1 {
+            font-size: 1.3rem;
+          }
+          
+          .attempts-list h2 {
+            font-size: 1.1rem;
+          }
+          
+          th, td {
+            padding: 0.3rem;
+            font-size: 0.75rem;
+          }
+          
+          .status {
+            font-size: 0.65rem;
+            padding: 0.15rem 0.3rem;
+          }
+          
+          .select-btn {
+            padding: 0.3rem 0.6rem;
+            font-size: 0.7rem;
+          }
+          
+          .reset-buttons {
+            flex-direction: column;
+          }
+          
+          .reset-btn, .cancel-btn {
+            width: 100%;
+          }
         }
       `}</style>
     </div>
